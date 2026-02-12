@@ -1,0 +1,9 @@
+@import './tokens.css';
+
+:root {
+  /* Default Glass Theme */
+  --bg-glass: rgba(255, 255, 255, 0.6);
+  --bg-glass-blur: blur(10px);
+  --border-glass: rgba(255, 255, 255, 0.4);
+  --shadow-glass: 0 4px 30px rgba(0, 0, 0, 0.1);
+}

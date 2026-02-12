@@ -1,0 +1,17 @@
+@import './themes.css';
+
+html, body {
+  padding: 0;
+  margin: 0;
+  font-family: var(--font-family);
+  background: var(--color-background);
+  color: var(--color-text);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+main {
+  padding: 1rem;
+}

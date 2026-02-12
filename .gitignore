@@ -1,0 +1,21 @@
+# Local environment files
+.env
+.DS_Store
+
+# Node modules
+**/node_modules/
+
+# Next.js build output
+**/.next/
+
+# Distribution directories
+**/dist/
+
+# Turborepo cache
+**/.turbo/
+
+# Python cache
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.venv/
