@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Order, OrderItem, Customer, MenuItem
+from ..models import Order, OrderItem, Customer, MenuItem, OrderStatus
 from ..schemas import OrderCreate, OrderRead
 
 router = APIRouter(prefix="/api/public/orders", tags=["Public Orders"])
@@ -18,7 +18,6 @@ def create_order(payload: OrderCreate, db: Session = Depends(get_db)):
     if payload.pickup_or_delivery == "pickup":
         payload.delivery_address = None
 
-    # Initialize order with temporary total
     order = Order(
         customer_id=payload.customer_id,
         phone=payload.phone,
@@ -28,7 +27,7 @@ def create_order(payload: OrderCreate, db: Session = Depends(get_db)):
         delivery_address=payload.delivery_address,
         comment=payload.comment,
         total_cents=0,
-        status="NEW"
+        status=OrderStatus.PENDING,
     )
     db.add(order)
     db.flush()
@@ -45,7 +44,7 @@ def create_order(payload: OrderCreate, db: Session = Depends(get_db)):
             order_id=order.id,
             menu_item_id=item_data.menu_item_id,
             qty=item_data.qty,
-            line_total_cents=line_total
+            line_total_cents=line_total,
         )
         db.add(order_item)
         total += line_total

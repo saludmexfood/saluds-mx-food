@@ -1,0 +1,75 @@
+# render.yaml — Render Blueprint
+# Deploy all three services from one GitHub repo.
+# https://render.com/docs/blueprint-spec
+
+databases:
+  - name: foodbiz-db
+    databaseName: foodbiz
+    plan: free
+    # Render auto-injects DATABASE_URL into services that reference this DB.
+
+services:
+  # ── Backend (FastAPI) ──────────────────────────────────────────────────────
+  - type: web
+    name: foodbiz-backend
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # Render auto-links the DATABASE_URL from the managed Postgres above.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: foodbiz-db
+          property: connectionString
+      - key: NODE_ENV
+        value: production
+      # ---- Fill these in the Render dashboard (do NOT commit secrets) ------
+      - key: ADMIN_PASSWORD
+        sync: false          # prompts in dashboard
+      - key: JWT_SECRET
+        sync: false
+      # Comma-separated list of production origins, e.g.:
+      # https://yourdomain.com,https://www.yourdomain.com,https://admin.yourdomain.com
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      # Set these to your real production URLs after deploying frontend:
+      - key: STRIPE_SUCCESS_URL
+        value: https://YOUR_DOMAIN/order/success?session_id={CHECKOUT_SESSION_ID}
+      - key: STRIPE_CANCEL_URL
+        value: https://YOUR_DOMAIN/order/cancel
+      - key: RESET_DB_ON_STARTUP
+        value: "false"
+      - key: DEMO_MODE
+        value: "false"
+
+  # ── Frontend (Next.js) ────────────────────────────────────────────────────
+  - type: web
+    name: foodbiz-frontend
+    runtime: node
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start -- -p $PORT
+    plan: free
+    envVars:
+      # Point to your backend's custom domain once DNS is set up.
+      # Before custom domain is ready, use: https://foodbiz-backend.onrender.com
+      - key: NEXT_PUBLIC_BACKEND_URL
+        value: https://api.YOUR_DOMAIN
+
+  # ── Admin (Next.js) ───────────────────────────────────────────────────────
+  - type: web
+    name: foodbiz-admin
+    runtime: node
+    rootDir: admin
+    buildCommand: npm ci && npm run build
+    startCommand: npm start -- -p $PORT
+    plan: free
+    envVars:
+      - key: NEXT_PUBLIC_BACKEND_URL
+        value: https://api.YOUR_DOMAIN

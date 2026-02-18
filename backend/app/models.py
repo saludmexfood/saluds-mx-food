@@ -3,9 +3,11 @@ from .db import Base
 from sqlalchemy.orm import relationship
 import enum
 
+
 class WeekStatus(str, enum.Enum):
     OPEN = "OPEN"
     CLOSED = "CLOSED"
+
 
 class MenuWeek(Base):
     __tablename__ = "menu_weeks"
@@ -51,6 +53,7 @@ class OrderStatus(str, enum.Enum):
     CONFIRMED = "CONFIRMED"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
+    PAID = "PAID"
 
 
 class Order(Base):
@@ -65,6 +68,8 @@ class Order(Base):
     comment = Column(String, nullable=True)
     total_cents = Column(Integer, nullable=False)
     status = Column(Enum(OrderStatus), default=OrderStatus.PENDING, nullable=False)
+    stripe_session_id = Column(String, nullable=True)
+    payment_intent_id = Column(String, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     customer = relationship("Customer", back_populates="orders")

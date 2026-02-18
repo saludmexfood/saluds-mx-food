@@ -25,7 +25,7 @@ def upsert_menu_week(payload: MenuWeekCreate, db: Session = Depends(get_db)):
     """
     Create a new menu week or update an existing one.
     """
-    week = MenuWeek(**payload.model_dump())
+    week = MenuWeek(**payload.dict())
     db.add(week)
     db.commit()
     db.refresh(week)

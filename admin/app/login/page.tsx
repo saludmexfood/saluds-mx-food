@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8010';
+
 export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -10,9 +12,9 @@ export default function LoginPage() {
 
   // DEV BYPASS — REMOVE OR DISABLE IN PROD
   useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      localStorage.setItem("access_token", "dev-token");
-      router.push("/dashboard");
+    if (process.env.NODE_ENV === 'development') {
+      localStorage.setItem('access_token', 'dev-token');
+      router.push('/dashboard');
     }
   }, []);
 
@@ -20,7 +22,7 @@ export default function LoginPage() {
     event.preventDefault();
     setError('');
     try {
-      const res = await fetch('http://localhost:8010/admin/auth/login', {
+      const res = await fetch(`${BACKEND}/admin/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),

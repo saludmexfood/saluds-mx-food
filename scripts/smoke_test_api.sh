@@ -1,86 +1,108 @@
 #!/usr/bin/env bash
-set -e
+# smoke_test_api.sh — Local API smoke test
+# Usage: ADMIN_PASSWORD=yourpassword bash scripts/smoke_test_api.sh
+# Optional: BACKEND_URL=http://localhost:8010 (defaults to http://localhost:8010)
+set -euo pipefail
 
-# Configuration
-BACKEND_URL=${BACKEND_URL:-http://localhost:${BACKEND_PORT:-8011}}
+BACKEND_URL=${BACKEND_URL:-http://localhost:${BACKEND_PORT:-8010}}
 ADMIN_PASSWORD=${ADMIN_PASSWORD:?Environment variable ADMIN_PASSWORD is required}
 
-echo "🟢 Checking /health endpoint at $BACKEND_URL/health"
-status=$(curl -s -o /dev/null -w "%{http_code}" -L "$BACKEND_URL/health")
-if [ "$status" -ne 200 ]; then
-  echo "❌ Health check failed (status $status)"
-  exit 1
-fi
-echo "✅ Health check passed"
+pass() { echo "✅ $*"; }
+fail() { echo "❌ $*" >&2; exit 1; }
+info() { echo "🟢 $*"; }
 
-echo "🟢 Verifying OpenAPI contains admin auth"
-openapi=$(curl -s -L "$BACKEND_URL/openapi.json")
-echo "$openapi" | grep -q '/admin/auth/login' || {
-  echo "❌ /admin/auth/login not found in OpenAPI. Check BACKEND_URL and port."
-  exit 1
-}
-echo "✅ OpenAPI contains admin auth endpoint"
+# ── 1. Health check ────────────────────────────────────────────────────────
+info "Health check at $BACKEND_URL/health"
+health_body=$(curl -sf "$BACKEND_URL/health") || fail "Health check HTTP error"
+echo "$health_body" | jq -e '.status == "ok"' > /dev/null || fail "Health check body unexpected: $health_body"
+pass "Health check: $health_body"
 
-echo "🟢 Logging in as admin"
-login_resp=$(curl -s -L -X POST "$BACKEND_URL/admin/auth/login" \
+# ── 2. OpenAPI sanity ──────────────────────────────────────────────────────
+info "Checking OpenAPI for required endpoints"
+openapi=$(curl -sf "$BACKEND_URL/openapi.json") || fail "Could not fetch /openapi.json"
+echo "$openapi" | grep -q '/admin/auth/login' || fail "/admin/auth/login not in OpenAPI"
+echo "$openapi" | grep -q '/api/public/menu' || fail "/api/public/menu not in OpenAPI"
+pass "OpenAPI contains /admin/auth/login and /api/public/menu"
+
+# ── 3. Admin login ─────────────────────────────────────────────────────────
+info "Admin login"
+login_resp=$(curl -sf -X POST "$BACKEND_URL/admin/auth/login" \
   -H "Content-Type: application/json" \
   -d "{\"password\":\"${ADMIN_PASSWORD}\"}")
-token=$(echo "$login_resp" | jq -r .access_token)
-if [ -z "$token" ] || [ "$token" == "null" ]; then
-  echo "❌ Login failed:"
-  echo "$login_resp"
-  exit 1
-fi
-echo "✅ Login succeeded, token acquired"
+token=$(echo "$login_resp" | jq -r '.access_token')
+[ -n "$token" ] && [ "$token" != "null" ] || fail "Login failed: $login_resp"
+pass "Login succeeded, token acquired"
 
-echo "🟢 Creating a menu week"
-week_resp=$(curl -s -L -X POST "$BACKEND_URL/admin/menu/weeks/" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $token" \
-  -d '{"selling_days":"Mon,Wed","status":"OPEN","published":false,"starts_at":"2026-02-15T00:00:00"}')
-week_id=$(echo "$week_resp" | jq -r .id)
-if [ -z "$week_id" ] || [ "$week_id" == "null" ]; then
-  echo "❌ MenuWeek creation failed:"
-  echo "$week_resp"
-  exit 1
-fi
-echo "✅ MenuWeek created (ID: $week_id)"
+AUTH=(-H "Authorization: Bearer $token")
 
-echo "🟢 Creating a menu item"
-item_resp=$(curl -s -L -X POST "$BACKEND_URL/admin/menu/items/" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $token" \
-  -d "{\"menu_week_id\":$week_id,\"name\":\"Test Item\",\"description\":\"Smoke test\",\"photo_url\":\"\",\"price_cents\":1000,\"available\":true}")
-item_id=$(echo "$item_resp" | jq -r .id)
-if [ -z "$item_id" ] || [ "$item_id" == "null" ]; then
-  echo "❌ MenuItem creation failed:"
-  echo "$item_resp"
-  exit 1
-fi
-echo "✅ MenuItem created (ID: $item_id)"
+# ── 4. Create menu week ────────────────────────────────────────────────────
+info "Creating a menu week"
+week_resp=$(curl -sf -X POST "$BACKEND_URL/admin/menu/weeks/" \
+  -H "Content-Type: application/json" "${AUTH[@]}" \
+  -d '{"selling_days":"Mon,Wed","status":"OPEN","published":false,"starts_at":"2026-06-01T00:00:00"}')
+week_id=$(echo "$week_resp" | jq -r '.id')
+[ -n "$week_id" ] && [ "$week_id" != "null" ] || fail "MenuWeek creation failed: $week_resp"
+pass "MenuWeek created (ID: $week_id)"
 
-echo "🟢 Publishing the menu week"
-pub_resp=$(curl -s -L -X PATCH "$BACKEND_URL/admin/menu/weeks/$week_id/" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $token" \
+# ── 5. Create menu item ────────────────────────────────────────────────────
+info "Creating a menu item"
+item_resp=$(curl -sf -X POST "$BACKEND_URL/admin/menu/items/" \
+  -H "Content-Type: application/json" "${AUTH[@]}" \
+  -d "{\"menu_week_id\":$week_id,\"name\":\"Smoke Test Taco\",\"description\":\"CI item\",\"price_cents\":1000,\"available\":true}")
+item_id=$(echo "$item_resp" | jq -r '.id')
+[ -n "$item_id" ] && [ "$item_id" != "null" ] || fail "MenuItem creation failed: $item_resp"
+pass "MenuItem created (ID: $item_id)"
+
+# ── 6. Publish menu week ───────────────────────────────────────────────────
+info "Publishing menu week"
+pub_resp=$(curl -sf -X PATCH "$BACKEND_URL/admin/menu/weeks/$week_id" \
+  -H "Content-Type: application/json" "${AUTH[@]}" \
   -d '{"published":true}')
-published=$(echo "$pub_resp" | jq -r .published)
-if [ "$published" != "true" ]; then
-  echo "❌ Publication failed:"
-  echo "$pub_resp"
-  exit 1
-fi
-echo "✅ MenuWeek published"
+published=$(echo "$pub_resp" | jq -r '.published')
+[ "$published" = "true" ] || fail "Publication failed: $pub_resp"
+pass "MenuWeek published"
 
-echo "🟢 Fetching public menu"
-public_resp=$(curl -s -L "$BACKEND_URL/api/public/menu")
-fetched_id=$(echo "$public_resp" | jq -r .id)
-if [ "$fetched_id" != "$week_id" ]; then
-  echo "❌ Public menu fetch failed:"
-  echo "$public_resp"
-  exit 1
-fi
-echo "✅ Public menu fetch returned the published week"
+# ── 7. Fetch public menu ───────────────────────────────────────────────────
+info "Fetching public menu"
+menu_resp=$(curl -sf "$BACKEND_URL/api/public/menu/")
+fetched_id=$(echo "$menu_resp" | jq -r '.id')
+[ "$fetched_id" = "$week_id" ] || fail "Public menu returned unexpected ID ($fetched_id vs $week_id): $menu_resp"
+pass "Public menu returned the published week (ID: $fetched_id)"
 
+# ── 8. Create order ────────────────────────────────────────────────────────
+info "Creating a public order"
+order_payload=$(cat <<EOF
+{
+  "phone": "555-000-0000",
+  "pickup_or_delivery": "pickup",
+  "total_cents": 1000,
+  "items": [{"menu_item_id": $item_id, "qty": 1, "line_total_cents": 1000}]
+}
+EOF
+)
+order_resp=$(curl -sf -X POST "$BACKEND_URL/api/public/orders/" \
+  -H "Content-Type: application/json" \
+  -d "$order_payload")
+order_id=$(echo "$order_resp" | jq -r '.id')
+order_status=$(echo "$order_resp" | jq -r '.status')
+[ -n "$order_id" ] && [ "$order_id" != "null" ] || fail "Order creation failed: $order_resp"
+[ "$order_status" = "PENDING" ] || fail "Expected status=PENDING, got $order_status"
+pass "Order created (ID: $order_id, status: $order_status)"
+
+# ── 9. Stripe checkout session (skip if not configured) ───────────────────
+if [ -z "${STRIPE_SECRET_KEY:-}" ]; then
+  echo "⏭  SKIP: STRIPE_SECRET_KEY not set — skipping Stripe checkout test"
+else
+  info "Creating Stripe checkout session for order $order_id"
+  stripe_resp=$(curl -sf -X POST "$BACKEND_URL/api/public/checkout/session" \
+    -H "Content-Type: application/json" \
+    -d "{\"order_id\": $order_id}")
+  stripe_url=$(echo "$stripe_resp" | jq -r '.url')
+  stripe_sid=$(echo "$stripe_resp" | jq -r '.session_id')
+  [ -n "$stripe_url" ] && [ "$stripe_url" != "null" ] || fail "Stripe session creation failed: $stripe_resp"
+  pass "Stripe checkout session created (session_id: $stripe_sid)"
+fi
+
+echo ""
 echo "🎉 API smoke test PASS"
 exit 0

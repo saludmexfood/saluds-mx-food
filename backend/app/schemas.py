@@ -3,15 +3,19 @@ from typing import List, Optional
 from pydantic import BaseModel
 import enum
 
+
 class WeekStatus(str, enum.Enum):
     OPEN = "OPEN"
     CLOSED = "CLOSED"
+
 
 class OrderStatus(str, enum.Enum):
     PENDING = "PENDING"
     CONFIRMED = "CONFIRMED"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
+    PAID = "PAID"
+
 
 # MenuItem Schemas
 class MenuItemBase(BaseModel):
@@ -22,8 +26,10 @@ class MenuItemBase(BaseModel):
     price_cents: int
     available: bool = True
 
+
 class MenuItemCreate(MenuItemBase):
     pass
+
 
 class MenuItemRead(MenuItemBase):
     id: int
@@ -32,12 +38,14 @@ class MenuItemRead(MenuItemBase):
     class Config:
         orm_mode = True
 
+
 class MenuItemUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     photo_url: Optional[str] = None
     price_cents: Optional[int] = None
     available: Optional[bool] = None
+
 
 # MenuWeek Schemas
 class MenuWeekBase(BaseModel):
@@ -46,8 +54,10 @@ class MenuWeekBase(BaseModel):
     published: bool = False
     starts_at: datetime
 
+
 class MenuWeekCreate(MenuWeekBase):
     pass
+
 
 class MenuWeekRead(MenuWeekBase):
     id: int
@@ -57,8 +67,10 @@ class MenuWeekRead(MenuWeekBase):
     class Config:
         orm_mode = True
 
+
 class MenuWeekUpdate(BaseModel):
     published: bool
+
 
 # Customer Schemas
 class CustomerBase(BaseModel):
@@ -68,8 +80,10 @@ class CustomerBase(BaseModel):
     sms_opt_in: bool = False
     email_opt_in: bool = False
 
+
 class CustomerCreate(CustomerBase):
     pass
+
 
 class CustomerRead(CustomerBase):
     id: int
@@ -78,20 +92,24 @@ class CustomerRead(CustomerBase):
     class Config:
         orm_mode = True
 
+
 # OrderItem Schemas
 class OrderItemBase(BaseModel):
     menu_item_id: int
     qty: int
     line_total_cents: int
 
+
 class OrderItemCreate(OrderItemBase):
     pass
+
 
 class OrderItemRead(OrderItemBase):
     id: int
 
     class Config:
         orm_mode = True
+
 
 # Order Schemas
 class OrderBase(BaseModel):
@@ -104,12 +122,16 @@ class OrderBase(BaseModel):
     comment: Optional[str] = None
     total_cents: int
 
+
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate]
+
 
 class OrderRead(OrderBase):
     id: int
     status: OrderStatus
+    stripe_session_id: Optional[str] = None
+    payment_intent_id: Optional[str] = None
     created_at: datetime
     items: List[OrderItemRead] = []
 

@@ -3,17 +3,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8010';
+
 export default function SettingsPage() {
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('');
   const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-const router = useRouter();
+  const router = useRouter();
 
-useEffect(() => {
-  if (!token) {
-    router.push('/login');
-  }
-}, [token, router]);
+  useEffect(() => {
+    if (!token) {
+      router.push('/login');
+    }
+  }, [token, router]);
 
   const actions = [
     { label: 'Pause System', endpoint: '/api/system/pause', key: 'pause' },
@@ -33,7 +35,7 @@ useEffect(() => {
     setLoadingAction(actionKey);
     setStatus('');
     try {
-      const res = await fetch(`http://localhost:8010${endpoint}`, {
+      const res = await fetch(`${BACKEND}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -51,8 +53,9 @@ useEffect(() => {
           setStatus(`❌ ${label} failed: ${msg}`);
         }
       }
-    } catch (error: any) {
-      setStatus(`❌ ${label} failed: ${error.message || 'Network error'}`);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Network error';
+      setStatus(`❌ ${label} failed: ${msg}`);
     } finally {
       setLoadingAction(null);
     }
