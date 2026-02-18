@@ -26,7 +26,7 @@ def create_admin_menu_item(
     payload: MenuItemCreate, db: Session = Depends(get_db)
 ):
     """Create a new menu item."""
-    item = MenuItem(**payload.model_dump())
+    item = MenuItem(**payload.dict())
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -41,7 +41,7 @@ def update_admin_menu_item(
     item = db.query(MenuItem).get(item_id)
     if not item:
         raise HTTPException(status_code=404, detail="MenuItem not found")
-    update_data = payload.model_dump(exclude_unset=True)
+    update_data = payload.dict(exclude_unset=True)
     for field, value in update_data.items():
         setattr(item, field, value)
     db.commit()

@@ -3,29 +3,28 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8010';
+
 export default function DashboardPage() {
   const router = useRouter();
   const [queues, setQueues] = useState<Record<string, string[]>>({});
   const [error, setError] = useState('');
+
   useEffect(() => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
-    fetch('http://localhost:8010/api/queues', {
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    fetch(`${BACKEND}/api/queues`, {
+      headers: { Authorization: `Bearer ${token}` },
     })
-      .then(res => res.json().then(j => ({ ok: res.ok, j })))
+      .then((res) => res.json().then((j) => ({ ok: res.ok, j })))
       .then(({ ok, j }) => {
         if (ok) setQueues(j);
         else setError(j.error || 'Failed to load queues');
       })
       .catch(() => setError('Network error'));
-  }, []);
-
-  // Redirect to login if no token
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      router.push('/login');
-    }
   }, [router]);
 
   function handleLogout() {
@@ -45,15 +44,18 @@ export default function DashboardPage() {
       <main>
         {error && <p style={{ color: 'red' }}>{error}</p>}
         {Object.keys(queues).length === 0 ? (
-          <p>Loading queues...</p>
+          <p>No queues found.</p>
         ) : (
           Object.entries(queues).map(([queue, files]) => (
             <section key={queue}>
               <h2>{queue.replace(/_/g, ' ')}</h2>
               <ul>
-                {files.map(file => (
+                {files.map((file) => (
                   <li key={file}>
-                    <a onClick={() => router.push(`/review?queue=${queue}&file=${file}`)}>
+                    <a
+                      style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => router.push(`/review?queue=${queue}&file=${file}`)}
+                    >
                       {file}
                     </a>
                   </li>
