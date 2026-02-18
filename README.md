@@ -21,6 +21,7 @@ All copy, images, and configuration are placeholders. Demo mode (`DEMO_MODE=true
 
 - Docker & Docker Compose
 - (Optional) Python 3.10+ for local backend development
+- `jq` CLI tool (for smoke test JSON parsing)
 
 ## Getting Started
 
@@ -30,28 +31,45 @@ All copy, images, and configuration are placeholders. Demo mode (`DEMO_MODE=true
    ```
 2. Launch all services:
    ```bash
-   docker-compose up --build
+   # Clean previous containers and start fresh
+   docker-compose down --remove-orphans
+   docker-compose up --build -d
    ```
 3. Backend health check:  
-   `http://localhost:8000/health`
+   ```bash
+   curl -s http://localhost:${BACKEND_PORT:-8011}/health
+   ```
 
-## Repository Structure
+## Port & URL
 
-```
-/
-├── frontend      # Next.js public site
-├── admin         # Next.js admin panel
-├── backend       # FastAPI backend
-├── docs          # Documentation and design tokens
-├── .env.example
-├── docker-compose.yml
-└── README.md
-```
+The backend container listens on port **8010** internally and is exposed on host port **8011** by default.
+
+- Override host port with `BACKEND_PORT`:
+  ```bash
+  BACKEND_PORT=8012 docker-compose up --build -d
+  ```
+- Override base URL with `BACKEND_URL`:
+  ```bash
+  BACKEND_URL=http://localhost:8012 bash scripts/smoke_test_api.sh
+  ```
 
 ## Demo Mode
 
 By default, services run in **demo** mode.  
 External integrations (Stripe, PayPal, SMS, Email, Social) operate in sandbox or dry-run only.
+
+## Local Smoke Test
+
+Prerequisites:
+- Services are running via Docker Compose.
+- Environment variables:
+  - `ADMIN_PASSWORD` (admin login password)
+  - Optional: `BACKEND_PORT`, `BACKEND_URL`
+
+Run the smoke test script:
+```bash
+ADMIN_PASSWORD=your_admin_password bash scripts/smoke_test_api.sh
+```
 
 ## License
 

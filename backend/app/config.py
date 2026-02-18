@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = "[PLACEHOLDER]"
     JWT_SECRET: str = "[PLACEHOLDER]"
     DB_URL: str = "sqlite:///./project_genesis.db"
+    ALLOWED_ORIGINS: list[str] = ["*"]
 
     @property
     def DATABASE_URL(self) -> str:

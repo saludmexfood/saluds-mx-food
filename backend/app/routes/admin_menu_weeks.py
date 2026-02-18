@@ -18,7 +18,7 @@ router = APIRouter(
 @router.get("/", response_model=List[MenuWeekRead])
 def list_admin_menu_weeks(db: Session = Depends(get_db)):
     """List all menu weeks, including unpublished."""
-    return db.query(MenuWeek).order_by(MenuWeek.week_start_date.desc()).all()
+    return db.query(MenuWeek).order_by(MenuWeek.starts_at.desc()).all()
 
 
 @router.post(
@@ -28,7 +28,7 @@ def create_admin_menu_week(
     payload: MenuWeekCreate, db: Session = Depends(get_db)
 ):
     """Create a new menu week."""
-    week = MenuWeek(**payload.model_dump())
+    week = MenuWeek(**payload.dict())
     db.add(week)
     db.commit()
     db.refresh(week)
@@ -43,7 +43,7 @@ def update_admin_menu_week(
     week = db.query(MenuWeek).get(week_id)
     if not week:
         raise HTTPException(status_code=404, detail="MenuWeek not found")
-    week.is_published = payload.is_published
+    week.published = payload.published
     db.commit()
     db.refresh(week)
     return week

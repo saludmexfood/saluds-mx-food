@@ -17,4 +17,4 @@ COPY . .
 
 EXPOSE 8010
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8010"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${BACKEND_PORT:-8010}"]

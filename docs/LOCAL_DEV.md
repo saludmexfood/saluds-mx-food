@@ -11,9 +11,10 @@ Create a file at the project root named `.env.local` with at least:
 ADMIN_PASSWORD=your_admin_password
 JWT_SECRET=your_jwt_secret
 DB_URL=sqlite:///./project_genesis.db
+BACKEND_PORT=8011
 
 # Admin UI
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8010
+NEXT_PUBLIC_API_BASE_URL=http://localhost:${BACKEND_PORT}
 ```
 
 ## Running the Backend

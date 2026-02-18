@@ -7,10 +7,10 @@ const nextConfig = {
   // DEV PROXY: forward /api/* to backend in development
   async rewrites() {
     return [
-      {
-        source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8010'}/api/:path*`
-      }
+        {
+          source: '/api/:path*',
+          destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:' + (process.env.NEXT_PUBLIC_BACKEND_PORT || '8010')}/api/:path*`
+        }
     ];
   },
 };

@@ -1,57 +1,53 @@
-from datetime import date, datetime
+from datetime import datetime
 from typing import List, Optional
-
 from pydantic import BaseModel
+import enum
 
+class WeekStatus(str, enum.Enum):
+    OPEN = "OPEN"
+    CLOSED = "CLOSED"
 
-# Shared properties
+class OrderStatus(str, enum.Enum):
+    PENDING = "PENDING"
+    CONFIRMED = "CONFIRMED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+# MenuItem Schemas
 class MenuItemBase(BaseModel):
     menu_week_id: int
     name: str
-    description: str
+    description: Optional[str] = None
+    photo_url: Optional[str] = None
     price_cents: int
-    qty_limit: Optional[int] = None
-    qty_sold: int = 0
-    is_sold_out: bool = False
-    is_active: bool = True
-
-
-class MenuWeekBase(BaseModel):
-    week_start_date: date
-    is_published: bool = False
-    pickup_window_text: str
-    notes_text: str
-
-
-# Input schemas
-class MenuWeekCreate(MenuWeekBase):
-    pass
-
+    available: bool = True
 
 class MenuItemCreate(MenuItemBase):
     pass
 
+class MenuItemRead(MenuItemBase):
+    id: int
+    created_at: datetime
 
-class MenuWeekUpdate(BaseModel):
-    is_published: bool
-
+    class Config:
+        orm_mode = True
 
 class MenuItemUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
+    photo_url: Optional[str] = None
     price_cents: Optional[int] = None
-    qty_limit: Optional[int] = None
-    is_sold_out: Optional[bool] = None
-    is_active: Optional[bool] = None
+    available: Optional[bool] = None
 
+# MenuWeek Schemas
+class MenuWeekBase(BaseModel):
+    selling_days: str
+    status: WeekStatus = WeekStatus.OPEN
+    published: bool = False
+    starts_at: datetime
 
-# Response schemas
-class MenuItemRead(MenuItemBase):
-    id: int
-
-    class Config:
-        from_attributes = True
-
+class MenuWeekCreate(MenuWeekBase):
+    pass
 
 class MenuWeekRead(MenuWeekBase):
     id: int
@@ -59,4 +55,94 @@ class MenuWeekRead(MenuWeekBase):
     items: List[MenuItemRead] = []
 
     class Config:
-        from_attributes = True
+        orm_mode = True
+
+class MenuWeekUpdate(BaseModel):
+    published: bool
+
+# Customer Schemas
+class CustomerBase(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    sms_opt_in: bool = False
+    email_opt_in: bool = False
+
+class CustomerCreate(CustomerBase):
+    pass
+
+class CustomerRead(CustomerBase):
+    id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# OrderItem Schemas
+class OrderItemBase(BaseModel):
+    menu_item_id: int
+    qty: int
+    line_total_cents: int
+
+class OrderItemCreate(OrderItemBase):
+    pass
+
+class OrderItemRead(OrderItemBase):
+    id: int
+
+    class Config:
+        orm_mode = True
+
+# Order Schemas
+class OrderBase(BaseModel):
+    customer_id: Optional[int] = None
+    phone: str
+    email: Optional[str] = None
+    pickup_or_delivery: str
+    delivery_fee_cents: int = 0
+    delivery_address: Optional[str] = None
+    comment: Optional[str] = None
+    total_cents: int
+
+class OrderCreate(OrderBase):
+    items: List[OrderItemCreate]
+
+class OrderRead(OrderBase):
+    id: int
+    status: OrderStatus
+    created_at: datetime
+    items: List[OrderItemRead] = []
+
+    class Config:
+        orm_mode = True
+
+
+class OrderStatusUpdate(BaseModel):
+    status: OrderStatus
+
+
+class ItemCount(BaseModel):
+    menu_item_id: int
+    total_qty: int
+
+
+class SpecialRequest(BaseModel):
+    order_id: int
+    comment: str
+
+
+class DeliveryInfo(BaseModel):
+    order_id: int
+    name: Optional[str]
+    phone: Optional[str]
+    address: Optional[str]
+    comment: Optional[str]
+
+
+class OrdersTally(BaseModel):
+    total_orders: int
+    total_pickup_orders: int
+    total_delivery_orders: int
+    item_counts: List[ItemCount]
+    special_requests: List[SpecialRequest]
+    delivery_list: List[DeliveryInfo]
