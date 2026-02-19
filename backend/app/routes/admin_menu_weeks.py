@@ -43,7 +43,14 @@ def update_admin_menu_week(
     week = db.query(MenuWeek).get(week_id)
     if not week:
         raise HTTPException(status_code=404, detail="MenuWeek not found")
-    week.published = payload.published
+    if payload.selling_days is not None:
+        week.selling_days = payload.selling_days
+    if payload.status is not None:
+        week.status = payload.status
+    if payload.starts_at is not None:
+        week.starts_at = payload.starts_at
+    if payload.published is not None:
+        week.published = payload.published
     db.commit()
     db.refresh(week)
     return week

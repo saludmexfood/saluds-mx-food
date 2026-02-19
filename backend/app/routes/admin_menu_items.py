@@ -32,6 +32,11 @@ def create_admin_menu_item(
     db.refresh(item)
     return item
 
+@router.get("/weeks/{week_id}/items", response_model=List[MenuItemRead])
+def list_menu_items_by_week(week_id: int, db: Session = Depends(get_db)):
+    """List items for a given week."""
+    return db.query(MenuItem).filter(MenuItem.menu_week_id == week_id).order_by(MenuItem.id).all()
+
 
 @router.patch("/{item_id}", response_model=MenuItemRead)
 def update_admin_menu_item(
