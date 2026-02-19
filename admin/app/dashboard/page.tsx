@@ -1,70 +1,63 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import React, { useState, useEffect } from "react";
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8010';
+const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
-export default function DashboardPage() {
-  const router = useRouter();
+export default function Dashboard() {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [queues, setQueues] = useState<Record<string, string[]>>({});
-  const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    const token = localStorage.getItem("token");
     if (!token) {
-      router.push('/login');
+      window.location.href = "/login";
       return;
     }
-    fetch(`${BACKEND}/api/queues`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json().then((j) => ({ ok: res.ok, j })))
-      .then(({ ok, j }) => {
-        if (ok) setQueues(j);
-        else setError(j.error || 'Failed to load queues');
-      })
-      .catch(() => setError('Network error'));
-  }, [router]);
 
-  function handleLogout() {
-    localStorage.removeItem('access_token');
-    router.push('/login');
+    async function loadQueues() {
+      try {
+        const res = await fetch(`${baseUrl}/api/queues`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        // Handle both response shapes
+        const obj: Record<string, string[]> =
+          typeof data.queues === "object" ? data.queues : data;
+        setQueues(obj);
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadQueues();
+  }, []);
+
+  if (loading) {
+    return <p>Loading…</p>;
+  }
+  if (error) {
+    return <p style={{ color: "red" }}>Error: {error}</p>;
   }
 
   return (
-    <div>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Demo Admin</h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button onClick={() => router.push('/settings')}>Settings</button>
-          <button onClick={handleLogout}>Logout</button>
-        </div>
-      </header>
-      <main>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {Object.keys(queues).length === 0 ? (
-          <p>No queues found.</p>
-        ) : (
-          Object.entries(queues).map(([queue, files]) => (
-            <section key={queue}>
-              <h2>{queue.replace(/_/g, ' ')}</h2>
-              <ul>
-                {files.map((file) => (
-                  <li key={file}>
-                    <a
-                      style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                      onClick={() => router.push(`/review?queue=${queue}&file=${file}`)}
-                    >
-                      {file}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
-        )}
-      </main>
+    <div style={{ padding: 20 }}>
+      <h1>Demo Admin</h1>
+      <ul>
+        {Object.entries(queues).map(([queueName, files]) => (
+          <li key={queueName}>
+            <strong>{queueName}</strong>
+            <ul>
+              {files.map((file) => (
+                <li key={file}>{file}</li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

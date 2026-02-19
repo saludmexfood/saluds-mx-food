@@ -69,7 +69,10 @@ class MenuWeekRead(MenuWeekBase):
 
 
 class MenuWeekUpdate(BaseModel):
-    published: bool
+    selling_days: Optional[str] = None
+    status: Optional[WeekStatus] = None
+    published: Optional[bool] = None
+    starts_at: Optional[datetime] = None
 
 
 # Customer Schemas

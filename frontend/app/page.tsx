@@ -107,6 +107,9 @@ export default function HomePage() {
       <p style={{ color: '#666', marginTop: 0 }}>
         Week of {new Date(week.starts_at).toLocaleDateString()} &middot; {week.selling_days}
       </p>
+      <p style={{ fontStyle: 'italic', color: '#444', marginTop: 0 }}>
+        All plates come in a to-go container with rice and beans.
+      </p>
 
       {availableItems.length === 0 ? (
         <p>No items available this week.</p>
