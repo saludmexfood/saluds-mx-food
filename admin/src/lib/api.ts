@@ -25,8 +25,10 @@ const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 const apiBase = `${baseUrl}/api`;
 
 function getAuthHeaders(): Record<string, string> {
+  // Keep token storage consistent with /login, /settings, etc.
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {})
