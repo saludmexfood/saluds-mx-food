@@ -10,7 +10,8 @@ export default function Dashboard() {
   const [queues, setQueues] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("access_token");
+
     if (!token) {
       window.location.href = "/login";
       return;
