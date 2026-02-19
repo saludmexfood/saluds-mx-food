@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import MenuWeek
-from ..schemas import MenuWeekCreate, MenuWeekRead, MenuWeekUpdate
+from ..models import MenuItem, MenuWeek
+from ..schemas import MenuItemRead, MenuWeekCreate, MenuWeekRead, MenuWeekUpdate
 from ..security import require_admin
 
 router = APIRouter(
@@ -29,6 +29,8 @@ def create_admin_menu_week(
 ):
     """Create a new menu week."""
     week = MenuWeek(**payload.dict())
+    week.week_start_date = payload.starts_at
+    week.is_published = payload.published
     db.add(week)
     db.commit()
     db.refresh(week)
@@ -49,8 +51,15 @@ def update_admin_menu_week(
         week.status = payload.status
     if payload.starts_at is not None:
         week.starts_at = payload.starts_at
+        week.week_start_date = payload.starts_at
     if payload.published is not None:
         week.published = payload.published
+        week.is_published = payload.published
     db.commit()
     db.refresh(week)
     return week
+
+@router.get("/{week_id}/items", response_model=List[MenuItemRead])
+def list_admin_menu_week_items(week_id: int, db: Session = Depends(get_db)):
+    """List items for a given menu week (alias for admin UI compatibility)."""
+    return db.query(MenuItem).filter(MenuItem.menu_week_id == week_id).order_by(MenuItem.id).all()

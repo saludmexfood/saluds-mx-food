@@ -32,6 +32,7 @@ def create_admin_menu_item(
     db.refresh(item)
     return item
 
+
 @router.get("/weeks/{week_id}/items", response_model=List[MenuItemRead])
 def list_menu_items_by_week(week_id: int, db: Session = Depends(get_db)):
     """List items for a given week."""

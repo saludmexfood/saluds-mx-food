@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from .config import settings
 from .db import engine, Base
+from .db_migrations import ensure_legacy_compat_columns
 from .routes.public_menu import router as public_menu_router
 from .routes.public_orders import router as public_orders_router
 from .routes.public_stripe import router as public_stripe_router
@@ -32,6 +33,7 @@ def on_startup():
     if settings.RESET_DB_ON_STARTUP:
         Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
+    ensure_legacy_compat_columns(engine)
 
 
 @app.get("/health", tags=["Health"])
