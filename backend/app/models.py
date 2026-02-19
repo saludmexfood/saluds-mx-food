@@ -18,6 +18,10 @@ class MenuWeek(Base):
     starts_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
+    # Legacy compatibility columns retained for older databases
+    week_start_date = Column(DateTime, nullable=False, default=func.now())
+    is_published = Column(Boolean, default=False, nullable=False)
+
     items = relationship("MenuItem", back_populates="week")
 
 

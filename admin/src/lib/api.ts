@@ -73,7 +73,7 @@ export function updateMenuWeek(
 
 // MenuItem endpoints
 export function getWeekItems(weekId: number) {
-  return apiFetch<any[]>(`${apiBase}/admin/menu/weeks/${weekId}/items`, {
+  return apiFetch<any[]>(`${apiBase}/admin/menu/items/weeks/${weekId}/items`, {
     headers: getAuthHeaders()
   });
 }

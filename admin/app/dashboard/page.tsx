@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import React, { useEffect, useState } from "react";
 
 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+
+type QueueMap = Record<string, string[]>;
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [queues, setQueues] = useState<Record<string, string[]>>({});
+  const [queues, setQueues] = useState<QueueMap>({});
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
@@ -22,11 +25,15 @@ export default function Dashboard() {
         const res = await fetch(`${baseUrl}/api/queues`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const data = await res.json();
-        // Handle both response shapes
-        const obj: Record<string, string[]> =
-          typeof data.queues === "object" ? data.queues : data;
-        setQueues(obj);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          const detail = typeof data?.detail === "string" ? data.detail : "Failed to load queues";
+          throw new Error(detail);
+        }
+
+        const nextQueues = typeof data?.queues === "object" ? data.queues : {};
+        setQueues(nextQueues as QueueMap);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
@@ -34,7 +41,7 @@ export default function Dashboard() {
       }
     }
 
-    loadQueues();
+    void loadQueues();
   }, []);
 
   if (loading) {
@@ -46,13 +53,16 @@ export default function Dashboard() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Demo Admin</h1>
+      <h1>Admin Dashboard</h1>
+      <p>
+        <Link href="/menu">Go to Menu Manager</Link>
+      </p>
       <ul>
         {Object.entries(queues).map(([queueName, files]) => (
           <li key={queueName}>
             <strong>{queueName}</strong>
             <ul>
-              {files.map((file) => (
+              {(files || []).map((file) => (
                 <li key={file}>{file}</li>
               ))}
             </ul>
