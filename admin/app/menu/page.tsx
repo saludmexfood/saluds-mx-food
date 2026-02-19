@@ -25,6 +25,7 @@ export default function MenuPage() {
   const [selectedWeekId, setSelectedWeekId] = useState<number | null>(null);
   const [items, setItems] = useState<MenuItem[]>([]);
   const [error, setError] = useState('');
+  const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,6 +38,12 @@ export default function MenuPage() {
     getMenuWeeks()
       .then((res) => {
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('access_token');
+            setAuthError('Please log in.');
+            window.location.href = '/login';
+            return;
+          }
           throw new Error((res.data as { detail?: string })?.detail || 'Failed to load menu weeks');
         }
         const rows = Array.isArray(res.data) ? (res.data as MenuWeek[]) : [];
@@ -58,6 +65,12 @@ export default function MenuPage() {
     getWeekItems(selectedWeekId)
       .then((res) => {
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem('access_token');
+            setAuthError('Please log in.');
+            window.location.href = '/login';
+            return;
+          }
           throw new Error((res.data as { detail?: string })?.detail || 'Failed to load week items');
         }
         setItems(Array.isArray(res.data) ? (res.data as MenuItem[]) : []);
@@ -66,6 +79,7 @@ export default function MenuPage() {
   }, [selectedWeekId]);
 
   if (loading) return <p>Loading menu…</p>;
+  if (authError) return <p style={{ color: 'red' }}>{authError}</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
 
   return (
