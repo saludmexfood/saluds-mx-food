@@ -10,19 +10,23 @@ export async function apiFetch<T>(
   init?: RequestInit
 ): Promise<ApiResponse<T>> {
   const res = await fetch(input, init);
-  const data = await res.json();
+  const data = await res.json().catch(() => ({})); // avoid crash on empty response
   return {
     ok: res.ok,
     status: res.status,
     url: res.url,
-    data
+    data: data as T
   };
 }
 
+// Base URL should be like: https://foodbiz-backend.onrender.com
 const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+// Backend API is mounted under /api
+const apiBase = `${baseUrl}/api`;
 
 function getAuthHeaders(): Record<string, string> {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {})
@@ -31,7 +35,7 @@ function getAuthHeaders(): Record<string, string> {
 
 // MenuWeek endpoints
 export function getMenuWeeks() {
-  return apiFetch<any[]>(`${baseUrl}/admin/menu/weeks`, {
+  return apiFetch<any[]>(`${apiBase}/admin/menu/weeks`, {
     headers: getAuthHeaders()
   });
 }
@@ -42,7 +46,7 @@ export function createMenuWeek(payload: {
   published: boolean;
   starts_at: string;
 }) {
-  return apiFetch<any>(`${baseUrl}/admin/menu/weeks`, {
+  return apiFetch<any>(`${apiBase}/admin/menu/weeks`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
@@ -58,7 +62,7 @@ export function updateMenuWeek(
     starts_at: string;
   }>
 ) {
-  return apiFetch<any>(`${baseUrl}/admin/menu/weeks/${id}`, {
+  return apiFetch<any>(`${apiBase}/admin/menu/weeks/${id}`, {
     method: "PATCH",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
@@ -67,7 +71,7 @@ export function updateMenuWeek(
 
 // MenuItem endpoints
 export function getWeekItems(weekId: number) {
-  return apiFetch<any[]>(`${baseUrl}/admin/menu/weeks/${weekId}/items`, {
+  return apiFetch<any[]>(`${apiBase}/admin/menu/weeks/${weekId}/items`, {
     headers: getAuthHeaders()
   });
 }
@@ -80,7 +84,7 @@ export function createMenuItem(payload: {
   price_cents: number;
   available: boolean;
 }) {
-  return apiFetch<any>(`${baseUrl}/admin/menu/items`, {
+  return apiFetch<any>(`${apiBase}/admin/menu/items`, {
     method: "POST",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
@@ -97,7 +101,7 @@ export function updateMenuItem(
     available: boolean;
   }>
 ) {
-  return apiFetch<any>(`${baseUrl}/admin/menu/items/${id}`, {
+  return apiFetch<any>(`${apiBase}/admin/menu/items/${id}`, {
     method: "PATCH",
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
