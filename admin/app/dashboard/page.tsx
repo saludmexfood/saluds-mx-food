@@ -3,13 +3,14 @@
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 
-const baseUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+const baseUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
 
 type QueueMap = Record<string, string[]>;
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [queues, setQueues] = useState<QueueMap>({});
 
   useEffect(() => {
@@ -28,11 +29,17 @@ export default function Dashboard() {
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) {
+            localStorage.removeItem("access_token");
+            setAuthError("Please log in.");
+            window.location.href = "/login";
+            return;
+          }
           const detail = typeof data?.detail === "string" ? data.detail : "Failed to load queues";
           throw new Error(detail);
         }
 
-        const nextQueues = typeof data?.queues === "object" ? data.queues : {};
+        const nextQueues = data?.queues && typeof data.queues === "object" ? data.queues : {};
         setQueues(nextQueues as QueueMap);
       } catch (e: unknown) {
         setError(e instanceof Error ? e.message : String(e));
@@ -46,6 +53,9 @@ export default function Dashboard() {
 
   if (loading) {
     return <p>Loading…</p>;
+  }
+  if (authError) {
+    return <p style={{ color: "red" }}>{authError}</p>;
   }
   if (error) {
     return <p style={{ color: "red" }}>Error: {error}</p>;
