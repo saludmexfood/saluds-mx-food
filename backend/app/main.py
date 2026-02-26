@@ -3,8 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from .config import settings
-from .db import engine, Base
+from .db import engine, Base, SessionLocal
 from .db_migrations import ensure_legacy_compat_columns
+from .seed import seed_demo_menu_if_empty
 from .routes.public_menu import router as public_menu_router
 from .routes.public_orders import router as public_orders_router
 from .routes.public_stripe import router as public_stripe_router
@@ -34,6 +35,13 @@ def on_startup():
         Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     ensure_legacy_compat_columns(engine)
+
+    if settings.SEED_DEMO_DATA:
+        db = SessionLocal()
+        try:
+            seed_demo_menu_if_empty(db)
+        finally:
+            db.close()
 
 
 @app.get("/health", tags=["Health"])
