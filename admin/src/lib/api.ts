@@ -107,3 +107,23 @@ export function updateMenuItem(
     body: JSON.stringify(payload)
   });
 }
+
+export function getAdminOrders() {
+  return apiFetch<any[]>(buildUrl('/api/admin/orders/'), {
+    headers: getAuthHeaders()
+  });
+}
+
+export function getAdminOrdersTally() {
+  return apiFetch<any>(buildUrl('/api/admin/orders/tally'), {
+    headers: getAuthHeaders()
+  });
+}
+
+export function updateAdminOrderStatus(orderId: number, status: string) {
+  return apiFetch<any>(buildUrl(`/api/admin/orders/${orderId}/status`), {
+    method: 'PATCH',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ status })
+  });
+}
