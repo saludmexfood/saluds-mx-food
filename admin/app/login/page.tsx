@@ -1,26 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8010';
 
 export default function LoginPage() {
-  const [password, setPassword] = useState('');
+  const passwordRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState('');
   const router = useRouter();
-
-  // DEV BYPASS — REMOVE OR DISABLE IN PROD
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      localStorage.setItem('access_token', 'dev-token');
-      router.push('/dashboard');
-    }
-  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError('');
+    const password = passwordRef.current?.value || '';
     try {
       const res = await fetch(`${BACKEND}/admin/auth/login`, {
         method: 'POST',
@@ -48,8 +41,8 @@ export default function LoginPage() {
           <label>Password:</label>
           <input
             type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            ref={passwordRef}
+            autoComplete="current-password"
             required
           />
         </div>
