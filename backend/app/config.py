@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # NEVER set to true in production.
     RESET_DB_ON_STARTUP: bool = False
 
+    # Set to true in demo/dev to seed a starter menu when DB has no menu data.
+    # Seeding is skipped automatically if existing menu data is present.
+    SEED_DEMO_DATA: bool = False
+
     # Stripe — leave empty to run without Stripe (checkout endpoints will return 503)
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
