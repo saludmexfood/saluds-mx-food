@@ -4,8 +4,8 @@ from pydantic import BaseSettings
 
 class Settings(BaseSettings):
     DEMO_MODE: bool = True
-    ADMIN_PASSWORD: str = "[PLACEHOLDER]"
-    JWT_SECRET: str = "[PLACEHOLDER]"
+    ADMIN_PASSWORD: str = ""
+    JWT_SECRET: str = ""
 
     # DB_URL is the primary config key.
     # On Render, the managed Postgres service injects DATABASE_URL automatically.
