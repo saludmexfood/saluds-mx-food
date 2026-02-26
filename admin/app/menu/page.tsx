@@ -7,6 +7,7 @@ import {
   createMenuWeek,
   getMenuWeeks,
   getWeekItems,
+  updateMenuWeek,
   updateMenuItem
 } from '../../src/lib/api';
 
@@ -45,8 +46,10 @@ export default function MenuPage() {
   const [creatingWeek, setCreatingWeek] = useState(false);
   const [creatingItem, setCreatingItem] = useState(false);
   const [updatingItemId, setUpdatingItemId] = useState<number | null>(null);
+  const [publishingWeek, setPublishingWeek] = useState(false);
   const [itemFormError, setItemFormError] = useState('');
   const [itemUpdateError, setItemUpdateError] = useState('');
+  const [weekPublishError, setWeekPublishError] = useState('');
   const [itemDrafts, setItemDrafts] = useState<Record<number, ItemDraft>>({});
   const [startsAt, setStartsAt] = useState('');
   const [sellingDays, setSellingDays] = useState('');
@@ -157,6 +160,54 @@ export default function MenuPage() {
         setItemsError(message);
       });
   }, [selectedWeekId]);
+
+  const handleSetSelectedWeekPublished = async (nextPublished: boolean) => {
+    if (!selectedWeekId) {
+      setWeekPublishError('Please select a menu week first.');
+      return;
+    }
+
+    setWeekPublishError('');
+    setPublishingWeek(true);
+
+    try {
+      if (nextPublished) {
+        const otherPublishedWeeks = weeks.filter((week) => week.id !== selectedWeekId && week.published);
+        for (const week of otherPublishedWeeks) {
+          const unpublishRes = await updateMenuWeek(week.id, { published: false });
+          if (!unpublishRes.ok) {
+            if (unpublishRes.status === 401 || unpublishRes.status === 403) {
+              localStorage.removeItem('access_token');
+              setAuthError('Please log in.');
+              window.location.href = '/login';
+              return;
+            }
+            throw new Error(
+              (unpublishRes.data as { detail?: string })?.detail ||
+                `Failed to unpublish week ${week.id} before publishing selected week`
+            );
+          }
+        }
+      }
+
+      const publishRes = await updateMenuWeek(selectedWeekId, { published: nextPublished });
+      if (!publishRes.ok) {
+        if (publishRes.status === 401 || publishRes.status === 403) {
+          localStorage.removeItem('access_token');
+          setAuthError('Please log in.');
+          window.location.href = '/login';
+          return;
+        }
+        throw new Error((publishRes.data as { detail?: string })?.detail || 'Failed to update week publish state');
+      }
+
+      await refreshWeeks(selectedWeekId);
+    } catch (err: unknown) {
+      setWeekPublishError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPublishingWeek(false);
+    }
+  };
 
   const handleCreateItem = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -327,6 +378,8 @@ export default function MenuPage() {
   if (authError) return <p style={{ color: 'red' }}>{authError}</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
 
+  const selectedWeek = weeks.find((week) => week.id === selectedWeekId);
+
   return (
     <div>
       <h1>Menu Manager</h1>
@@ -345,6 +398,22 @@ export default function MenuPage() {
           </option>
         ))}
       </select>
+
+      <div style={{ marginTop: '0.75rem', marginBottom: '1rem' }}>
+        <button
+          type="button"
+          onClick={() => handleSetSelectedWeekPublished(!selectedWeek?.published)}
+          disabled={!selectedWeek || publishingWeek}
+        >
+          {publishingWeek
+            ? 'Saving publish state…'
+            : selectedWeek?.published
+              ? 'Unpublish this week'
+              : 'Publish this week'}
+        </button>{' '}
+        {selectedWeek ? <span>Current state: {selectedWeek.published ? 'Published' : 'Draft'}</span> : null}
+        {weekPublishError ? <p style={{ color: 'red' }}>Publish error: {weekPublishError}</p> : null}
+      </div>
 
       <h2>Create Menu Week</h2>
       <form onSubmit={handleCreateWeek}>
