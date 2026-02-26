@@ -67,6 +67,9 @@ export default function Dashboard() {
       <p>
         <Link href="/menu">Go to Menu Manager</Link>
       </p>
+      <p>
+        <Link href="/orders">Go to Orders</Link>
+      </p>
       <ul>
         {Object.entries(queues).map(([queueName, files]) => (
           <li key={queueName}>
