@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { setAdminSession } from '../../src/lib/auth';
 
 const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8010';
 
@@ -23,7 +24,7 @@ export default function LoginPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) return setError(data.detail || 'Login failed');
-      localStorage.setItem('access_token', data.access_token);
+      setAdminSession(data.access_token);
       router.push('/dashboard');
     } catch {
       setError('Network error');
@@ -33,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="neo panel" style={{ maxWidth: 420, margin: '5rem auto' }}>
+    <main className="glass panel admin-login">
       <h1 className="page-title">Admin Login</h1>
       <p style={{ color: 'var(--muted)' }}>Welcome back. Please enter your admin password.</p>
       <form onSubmit={handleSubmit} className="stack">

@@ -13,6 +13,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
+  const [socialOpen, setSocialOpen] = useState(false);
   const t = copy[locale];
 
   useEffect(() => {
@@ -64,6 +65,8 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <div className="bg-overlay" />
       <div className="orb orb-a" />
       <div className="orb orb-b" />
+      <div className="orb orb-c" />
+
       <header className="top-nav glass">
         <p className="wordmark">{t.wordmark}</p>
         <nav>
@@ -78,10 +81,11 @@ export default function PublicShell({ children }: { children: ReactNode }) {
 
       <footer className="glass site-footer">
         <p>{t.disclaimer}</p>
-        <div className="social-ring">
-          <a href="https://instagram.com" target="_blank">IG</a>
-          <a href="https://facebook.com" target="_blank">FB</a>
-          <a href="https://wa.me/16202621073" target="_blank">WA</a>
+        <div className={`social-orbit ${socialOpen ? 'open' : ''}`}>
+          <button className="orbit-toggle" onClick={() => setSocialOpen((v) => !v)} aria-label="Toggle contact options">◎</button>
+          <a href="https://instagram.com" target="_blank" rel="noreferrer">IG</a>
+          <a href="https://facebook.com" target="_blank" rel="noreferrer">FB</a>
+          <a href="https://wa.me/16202621073" target="_blank" rel="noreferrer">WA</a>
           <a href="tel:+16202621073">Call</a>
           <a href="sms:+16202621073">SMS</a>
           <a href="mailto:parrasalud@gmail.com">Email</a>
@@ -89,7 +93,7 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       </footer>
 
       <button className="chat-launcher glass" onClick={() => setChatOpen((v) => !v)}>
-        ✦
+        {chatOpen ? '×' : '✦'}
       </button>
       {chatOpen && (
         <aside className="chat-panel glass">
