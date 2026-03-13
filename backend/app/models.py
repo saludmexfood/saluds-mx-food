@@ -90,3 +90,11 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
     menu_item = relationship("MenuItem")
+
+
+class StripeWebhookEvent(Base):
+    __tablename__ = "stripe_webhook_events"
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String, nullable=False, unique=True, index=True)
+    event_type = Column(String, nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
