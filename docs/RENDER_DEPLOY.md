@@ -165,3 +165,40 @@ After adding DNS records, wait up to 10 minutes, then click **Verify** in Render
 **Stripe webhook 400**: Ensure raw body is not modified by any middleware. The webhook handler reads raw bytes — FastAPI handles this correctly via `Request.body()`.
 
 **GoDaddy propagation slow**: DNS changes can take up to 48 hours globally, but usually complete in minutes. Use [dnschecker.org](https://dnschecker.org) to check propagation.
+
+
+## Step 8 — Render Verification Checklist (exact URLs)
+
+Replace `yourdomain.com` with your real production domain.
+
+1. Backend health:
+   - `https://api.yourdomain.com/health`
+2. Public menu API:
+   - `https://api.yourdomain.com/api/public/menu/`
+3. Admin login page:
+   - `https://admin.yourdomain.com/login`
+4. Admin menu manager:
+   - `https://admin.yourdomain.com/menu`
+5. Frontend menu:
+   - `https://yourdomain.com/`
+6. Stripe success page:
+   - `https://yourdomain.com/order/success`
+7. Stripe cancel page:
+   - `https://yourdomain.com/order/cancel`
+
+Expected behavior:
+- Admin can create/publish a week and quickly add preset items with photos.
+- Public menu shows item photos and enables Stripe checkout only after required delivery fields are completed.
+
+## Step 9 — Stripe webhook manual verification
+
+If automated signed webhook testing is not available in CI, run this manual verification from your machine:
+
+1. Install and login to Stripe CLI.
+2. Forward events to Render backend:
+   - `stripe listen --forward-to https://api.yourdomain.com/api/public/stripe/webhook`
+3. In another terminal, trigger the event:
+   - `stripe trigger checkout.session.completed`
+4. In Render logs, confirm the webhook endpoint returns `200`.
+5. Confirm the order transitions from `PENDING` to `PAID` in the database/admin orders view.
+6. Re-trigger the same event ID (or resend from Stripe dashboard) and confirm idempotent handling (no duplicate update side effects).

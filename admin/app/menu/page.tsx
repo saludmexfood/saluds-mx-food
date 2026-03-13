@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   createMenuItem,
   createMenuWeek,
@@ -11,10 +11,14 @@ import {
   updateMenuItem
 } from '../../src/lib/api';
 
+const DEFAULT_PLATE_DESCRIPTION = 'All plates come in a to-go container with rice and beans';
+
+type WeekStatus = 'OPEN' | 'CLOSED';
+
 interface MenuWeek {
   id: number;
   selling_days: string;
-  status: string;
+  status: WeekStatus;
   published: boolean;
   starts_at: string;
 }
@@ -23,6 +27,7 @@ interface MenuItem {
   id: number;
   name: string;
   description?: string;
+  photo_url?: string;
   price_cents: number;
   available: boolean;
 }
@@ -30,8 +35,102 @@ interface MenuItem {
 interface ItemDraft {
   name: string;
   description: string;
-  price_cents: string;
+  photo_url: string;
+  price_dollars: string;
   active: boolean;
+}
+
+interface ItemFormErrors {
+  name?: string;
+  price?: string;
+  photo?: string;
+}
+
+interface PresetItem {
+  name: string;
+  description: string;
+  priceDollars: string;
+  photoUrl: string;
+}
+
+const PHOTO_OPTIONS = [
+  '/static/menu_photos/placeholder.svg',
+  '/static/menu_photos/platillo-de-enchiladas-rojas.svg',
+  '/static/menu_photos/enchiladas-verdes.svg',
+  '/static/menu_photos/tamales.svg',
+  '/static/menu_photos/menudo.svg',
+  '/static/menu_photos/gorditas.svg',
+  '/static/menu_photos/quesabirria-tacos.svg',
+  '/static/menu_photos/torta.svg'
+];
+
+const QUICK_ADD_PRESETS: PresetItem[] = [
+  {
+    name: 'Platillo de Enchiladas Rojas',
+    description: DEFAULT_PLATE_DESCRIPTION,
+    priceDollars: '10.00',
+    photoUrl: '/static/menu_photos/platillo-de-enchiladas-rojas.svg'
+  },
+  {
+    name: 'Enchiladas Verdes',
+    description: DEFAULT_PLATE_DESCRIPTION,
+    priceDollars: '10.00',
+    photoUrl: '/static/menu_photos/enchiladas-verdes.svg'
+  },
+  {
+    name: 'Tamales (per dozen)',
+    description: DEFAULT_PLATE_DESCRIPTION,
+    priceDollars: '20.00',
+    photoUrl: '/static/menu_photos/tamales.svg'
+  },
+  {
+    name: 'Menudo',
+    description: DEFAULT_PLATE_DESCRIPTION,
+    priceDollars: '12.00',
+    photoUrl: '/static/menu_photos/menudo.svg'
+  },
+  {
+    name: 'Gorditas',
+    description: DEFAULT_PLATE_DESCRIPTION,
+    priceDollars: '10.00',
+    photoUrl: '/static/menu_photos/gorditas.svg'
+  },
+  {
+    name: 'Quesabirria Tacos (per plate)',
+    description: DEFAULT_PLATE_DESCRIPTION,
+    priceDollars: '12.00',
+    photoUrl: '/static/menu_photos/quesabirria-tacos.svg'
+  },
+  {
+    name: 'Tortas',
+    description: DEFAULT_PLATE_DESCRIPTION,
+    priceDollars: '10.00',
+    photoUrl: '/static/menu_photos/torta.svg'
+  }
+];
+
+const DEFAULT_ITEM_DRAFT: ItemDraft = {
+  name: '',
+  description: DEFAULT_PLATE_DESCRIPTION,
+  photo_url: '/static/menu_photos/placeholder.svg',
+  price_dollars: '',
+  active: true
+};
+
+function centsToDollars(value: number): string {
+  return (value / 100).toFixed(2);
+}
+
+function parseDollarPriceToCents(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) {
+    return null;
+  }
+  const cents = Math.round(Number(trimmed) * 100);
+  return Number.isFinite(cents) && cents >= 0 ? cents : null;
 }
 
 export default function MenuPage() {
@@ -50,35 +149,32 @@ export default function MenuPage() {
   const [itemFormError, setItemFormError] = useState('');
   const [itemUpdateError, setItemUpdateError] = useState('');
   const [weekPublishError, setWeekPublishError] = useState('');
+  const [newItemErrors, setNewItemErrors] = useState<ItemFormErrors>({});
+  const [editItemErrors, setEditItemErrors] = useState<Record<number, ItemFormErrors>>({});
   const [itemDrafts, setItemDrafts] = useState<Record<number, ItemDraft>>({});
   const [startsAt, setStartsAt] = useState('');
   const [sellingDays, setSellingDays] = useState('');
-  const [status, setStatus] = useState<'OPEN' | 'CLOSED'>('OPEN');
+  const [status, setStatus] = useState<WeekStatus>('OPEN');
   const [published, setPublished] = useState(false);
-  const [newItem, setNewItem] = useState<ItemDraft>({
-    name: '',
-    description: '',
-    price_cents: '',
-    active: true
-  });
+  const [newItem, setNewItem] = useState<ItemDraft>(DEFAULT_ITEM_DRAFT);
+
+  const selectedWeek = useMemo(
+    () => weeks.find((week) => week.id === selectedWeekId),
+    [weeks, selectedWeekId]
+  );
 
   const toItemDraft = (item: MenuItem): ItemDraft => ({
     name: item.name,
     description: item.description || '',
-    price_cents: String(item.price_cents),
+    photo_url: item.photo_url || '/static/menu_photos/placeholder.svg',
+    price_dollars: centsToDollars(item.price_cents),
     active: item.available
   });
 
-  const parsePriceCents = (value: string): number | null => {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-    const parsed = Number(trimmed);
-    if (!Number.isInteger(parsed) || parsed < 0) {
-      return null;
-    }
-    return parsed;
+  const setAuthFailure = () => {
+    localStorage.removeItem('access_token');
+    setAuthError('Please log in.');
+    window.location.href = '/login';
   };
 
   const loadWeekItems = async (weekId: number) => {
@@ -86,9 +182,7 @@ export default function MenuPage() {
     setItemsError('');
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('access_token');
-        setAuthError('Please log in.');
-        window.location.href = '/login';
+        setAuthFailure();
         return;
       }
       throw new Error((res.data as { detail?: string })?.detail || 'Failed to load week items');
@@ -103,9 +197,7 @@ export default function MenuPage() {
     const res = await getMenuWeeks();
     if (!res.ok) {
       if (res.status === 401 || res.status === 403) {
-        localStorage.removeItem('access_token');
-        setAuthError('Please log in.');
-        window.location.href = '/login';
+        setAuthFailure();
         return;
       }
       throw new Error((res.data as { detail?: string })?.detail || 'Failed to load menu weeks');
@@ -131,7 +223,8 @@ export default function MenuPage() {
       if (current && rows.some((week) => week.id === current)) {
         return current;
       }
-      return rows[0].id;
+      const publishedWeek = rows.find((week) => week.published);
+      return publishedWeek?.id || rows[0].id;
     });
   };
 
@@ -154,12 +247,42 @@ export default function MenuPage() {
       return;
     }
 
-    loadWeekItems(selectedWeekId)
-      .catch((e: unknown) => {
-        const message = e instanceof Error ? e.message : String(e);
-        setItemsError(message);
-      });
+    loadWeekItems(selectedWeekId).catch((e: unknown) => {
+      const message = e instanceof Error ? e.message : String(e);
+      setItemsError(message);
+    });
   }, [selectedWeekId]);
+
+  const applyPreset = (preset: PresetItem) => {
+    setNewItem({
+      name: preset.name,
+      description: preset.description,
+      photo_url: preset.photoUrl,
+      price_dollars: preset.priceDollars,
+      active: true
+    });
+    setNewItemErrors({});
+    setItemFormError('');
+  };
+
+  const validateDraft = (draft: ItemDraft): ItemFormErrors => {
+    const nextErrors: ItemFormErrors = {};
+
+    if (!draft.name.trim()) {
+      nextErrors.name = 'Name is required.';
+    }
+
+    const parsedPriceCents = parseDollarPriceToCents(draft.price_dollars);
+    if (parsedPriceCents === null) {
+      nextErrors.price = 'Enter a valid dollar amount (example: 10.00).';
+    }
+
+    if (!draft.photo_url.trim()) {
+      nextErrors.photo = 'Photo selection is required.';
+    }
+
+    return nextErrors;
+  };
 
   const handleSetSelectedWeekPublished = async (nextPublished: boolean) => {
     if (!selectedWeekId) {
@@ -177,9 +300,7 @@ export default function MenuPage() {
           const unpublishRes = await updateMenuWeek(week.id, { published: false });
           if (!unpublishRes.ok) {
             if (unpublishRes.status === 401 || unpublishRes.status === 403) {
-              localStorage.removeItem('access_token');
-              setAuthError('Please log in.');
-              window.location.href = '/login';
+              setAuthFailure();
               return;
             }
             throw new Error(
@@ -193,9 +314,7 @@ export default function MenuPage() {
       const publishRes = await updateMenuWeek(selectedWeekId, { published: nextPublished });
       if (!publishRes.ok) {
         if (publishRes.status === 401 || publishRes.status === 403) {
-          localStorage.removeItem('access_token');
-          setAuthError('Please log in.');
-          window.location.href = '/login';
+          setAuthFailure();
           return;
         }
         throw new Error((publishRes.data as { detail?: string })?.detail || 'Failed to update week publish state');
@@ -219,14 +338,15 @@ export default function MenuPage() {
       return;
     }
 
-    if (!newItem.name.trim()) {
-      setItemFormError('name is required');
+    const fieldErrors = validateDraft(newItem);
+    setNewItemErrors(fieldErrors);
+    if (Object.keys(fieldErrors).length > 0) {
       return;
     }
 
-    const parsedPriceCents = parsePriceCents(newItem.price_cents);
+    const parsedPriceCents = parseDollarPriceToCents(newItem.price_dollars);
     if (parsedPriceCents === null) {
-      setItemFormError('price_cents must be a non-negative integer');
+      setItemFormError('Unable to parse item price.');
       return;
     }
 
@@ -236,26 +356,21 @@ export default function MenuPage() {
         menu_week_id: selectedWeekId,
         name: newItem.name.trim(),
         description: newItem.description.trim() || undefined,
+        photo_url: newItem.photo_url.trim(),
         price_cents: parsedPriceCents,
         available: newItem.active
       });
 
       if (!createRes.ok) {
         if (createRes.status === 401 || createRes.status === 403) {
-          localStorage.removeItem('access_token');
-          setAuthError('Please log in.');
-          window.location.href = '/login';
+          setAuthFailure();
           return;
         }
         throw new Error((createRes.data as { detail?: string })?.detail || 'Failed to create item');
       }
 
-      setNewItem({
-        name: '',
-        description: '',
-        price_cents: '',
-        active: true
-      });
+      setNewItem(DEFAULT_ITEM_DRAFT);
+      setNewItemErrors({});
       await loadWeekItems(selectedWeekId);
     } catch (err: unknown) {
       setItemFormError(err instanceof Error ? err.message : String(err));
@@ -268,10 +383,33 @@ export default function MenuPage() {
     setItemDrafts((current) => ({
       ...current,
       [itemId]: {
-        ...(current[itemId] || { name: '', description: '', price_cents: '', active: false }),
+        ...(current[itemId] || DEFAULT_ITEM_DRAFT),
         [field]: value
       }
     }));
+
+    setEditItemErrors((current) => {
+      const currentErrors = { ...(current[itemId] || {}) };
+      if (field === 'name') {
+        delete currentErrors.name;
+      }
+      if (field === 'price_dollars') {
+        delete currentErrors.price;
+      }
+      if (field === 'photo_url') {
+        delete currentErrors.photo;
+      }
+
+      if (Object.keys(currentErrors).length === 0) {
+        const { [itemId]: _removed, ...rest } = current;
+        return rest;
+      }
+
+      return {
+        ...current,
+        [itemId]: currentErrors
+      };
+    });
   };
 
   const handleUpdateItem = async (itemId: number) => {
@@ -282,14 +420,15 @@ export default function MenuPage() {
 
     setItemUpdateError('');
 
-    if (!draft.name.trim()) {
-      setItemUpdateError('name is required');
+    const fieldErrors = validateDraft(draft);
+    if (Object.keys(fieldErrors).length > 0) {
+      setEditItemErrors((current) => ({ ...current, [itemId]: fieldErrors }));
       return;
     }
 
-    const parsedPriceCents = parsePriceCents(draft.price_cents);
+    const parsedPriceCents = parseDollarPriceToCents(draft.price_dollars);
     if (parsedPriceCents === null) {
-      setItemUpdateError('price_cents must be a non-negative integer');
+      setItemUpdateError('Unable to parse item price.');
       return;
     }
 
@@ -298,15 +437,14 @@ export default function MenuPage() {
       const updateRes = await updateMenuItem(itemId, {
         name: draft.name.trim(),
         description: draft.description.trim() || undefined,
+        photo_url: draft.photo_url.trim() || undefined,
         price_cents: parsedPriceCents,
         available: draft.active
       });
 
       if (!updateRes.ok) {
         if (updateRes.status === 401 || updateRes.status === 403) {
-          localStorage.removeItem('access_token');
-          setAuthError('Please log in.');
-          window.location.href = '/login';
+          setAuthFailure();
           return;
         }
         throw new Error((updateRes.data as { detail?: string })?.detail || 'Failed to update item');
@@ -349,15 +487,11 @@ export default function MenuPage() {
 
       if (!createRes.ok) {
         if (createRes.status === 401 || createRes.status === 403) {
-          localStorage.removeItem('access_token');
-          setAuthError('Please log in.');
-          window.location.href = '/login';
+          setAuthFailure();
           return;
         }
 
-        throw new Error(
-          (createRes.data as { detail?: string })?.detail || 'Failed to create menu week'
-        );
+        throw new Error((createRes.data as { detail?: string })?.detail || 'Failed to create menu week');
       }
 
       const createdWeek = createRes.data as MenuWeek;
@@ -374,19 +508,24 @@ export default function MenuPage() {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('access_token');
+    window.location.href = '/login';
+  };
+
   if (loading) return <p>Loading menu…</p>;
   if (authError) return <p style={{ color: 'red' }}>{authError}</p>;
   if (error) return <p style={{ color: 'red' }}>Error: {error}</p>;
-
-  const selectedWeek = weeks.find((week) => week.id === selectedWeekId);
 
   return (
     <div>
       <h1>Menu Manager</h1>
       <p>
-        <Link href="/dashboard">Back to dashboard</Link>
+        <Link href="/dashboard">Back to dashboard</Link> ·{' '}
+        <button type="button" onClick={handleLogout}>Log out</button>
       </p>
-      <label htmlFor="week-select">Week:</label>{' '}
+
+      <label htmlFor="week-select">Select week:</label>{' '}
       <select
         id="week-select"
         value={selectedWeekId ?? ''}
@@ -394,7 +533,7 @@ export default function MenuPage() {
       >
         {weeks.map((w) => (
           <option key={w.id} value={w.id}>
-            {new Date(w.starts_at).toLocaleDateString()} · {w.selling_days} · {w.published ? 'Published' : 'Draft'}
+            {w.published ? '✅ Published' : 'Draft'} · Week of {new Date(w.starts_at).toLocaleDateString()} · {w.selling_days}
           </option>
         ))}
       </select>
@@ -411,7 +550,7 @@ export default function MenuPage() {
               ? 'Unpublish this week'
               : 'Publish this week'}
         </button>{' '}
-        {selectedWeek ? <span>Current state: {selectedWeek.published ? 'Published' : 'Draft'}</span> : null}
+        {selectedWeek ? <span>Current state: {selectedWeek.published ? 'Published ✅' : 'Draft'}</span> : null}
         {weekPublishError ? <p style={{ color: 'red' }}>Publish error: {weekPublishError}</p> : null}
       </div>
 
@@ -439,7 +578,7 @@ export default function MenuPage() {
         </div>
         <div>
           <label htmlFor="status">status:</label>{' '}
-          <select id="status" value={status} onChange={(e) => setStatus(e.target.value as 'OPEN' | 'CLOSED')}>
+          <select id="status" value={status} onChange={(e) => setStatus(e.target.value as WeekStatus)}>
             <option value="OPEN">OPEN</option>
             <option value="CLOSED">CLOSED</option>
           </select>
@@ -461,10 +600,19 @@ export default function MenuPage() {
 
       {itemsError ? <p style={{ color: 'red' }}>Items error: {itemsError}</p> : null}
 
+      <h2>Quick Add Presets</h2>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+        {QUICK_ADD_PRESETS.map((preset) => (
+          <button key={preset.name} type="button" onClick={() => applyPreset(preset)}>
+            {preset.name}
+          </button>
+        ))}
+      </div>
+
       <h2>Create Item</h2>
       <form onSubmit={handleCreateItem}>
         <div>
-          <label htmlFor="new-item-name">name:</label>{' '}
+          <label htmlFor="new-item-name">Name:</label>{' '}
           <input
             id="new-item-name"
             type="text"
@@ -472,9 +620,10 @@ export default function MenuPage() {
             onChange={(e) => setNewItem((current) => ({ ...current, name: e.target.value }))}
             required
           />
+          {newItemErrors.name ? <p style={{ color: 'red' }}>{newItemErrors.name}</p> : null}
         </div>
         <div>
-          <label htmlFor="new-item-description">description:</label>{' '}
+          <label htmlFor="new-item-description">Description:</label>{' '}
           <input
             id="new-item-description"
             type="text"
@@ -483,16 +632,32 @@ export default function MenuPage() {
           />
         </div>
         <div>
-          <label htmlFor="new-item-price-cents">price_cents:</label>{' '}
+          <label htmlFor="new-item-photo">Photo:</label>{' '}
+          <select
+            id="new-item-photo"
+            value={newItem.photo_url}
+            onChange={(e) => setNewItem((current) => ({ ...current, photo_url: e.target.value }))}
+          >
+            {PHOTO_OPTIONS.map((photoUrl) => (
+              <option key={photoUrl} value={photoUrl}>
+                {photoUrl.split('/').pop()}
+              </option>
+            ))}
+          </select>
+          {newItemErrors.photo ? <p style={{ color: 'red' }}>{newItemErrors.photo}</p> : null}
+        </div>
+        <div>
+          <label htmlFor="new-item-price-dollars">Price (USD):</label>{' '}
           <input
-            id="new-item-price-cents"
-            type="number"
-            min={0}
-            step={1}
-            value={newItem.price_cents}
-            onChange={(e) => setNewItem((current) => ({ ...current, price_cents: e.target.value }))}
+            id="new-item-price-dollars"
+            type="text"
+            inputMode="decimal"
+            placeholder="10.00"
+            value={newItem.price_dollars}
+            onChange={(e) => setNewItem((current) => ({ ...current, price_dollars: e.target.value }))}
             required
           />
+          {newItemErrors.price ? <p style={{ color: 'red' }}>{newItemErrors.price}</p> : null}
         </div>
         <div>
           <label htmlFor="new-item-active">active:</label>{' '}
@@ -515,6 +680,7 @@ export default function MenuPage() {
           <tr>
             <th style={{ textAlign: 'left' }}>Name</th>
             <th style={{ textAlign: 'left' }}>Description</th>
+            <th style={{ textAlign: 'left' }}>Photo</th>
             <th style={{ textAlign: 'left' }}>Price</th>
             <th style={{ textAlign: 'left' }}>Active</th>
             <th style={{ textAlign: 'left' }}>Actions</th>
@@ -523,6 +689,7 @@ export default function MenuPage() {
         <tbody>
           {items.map((item) => {
             const draft = itemDrafts[item.id] || toItemDraft(item);
+            const rowErrors = editItemErrors[item.id] || {};
             return (
               <tr key={item.id}>
                 <td>
@@ -531,6 +698,7 @@ export default function MenuPage() {
                     value={draft.name}
                     onChange={(e) => handleItemFieldChange(item.id, 'name', e.target.value)}
                   />
+                  {rowErrors.name ? <p style={{ color: 'red' }}>{rowErrors.name}</p> : null}
                 </td>
                 <td>
                   <input
@@ -540,14 +708,26 @@ export default function MenuPage() {
                   />
                 </td>
                 <td>
-                  <div>${(Number(draft.price_cents || 0) / 100).toFixed(2)}</div>
+                  <select
+                    value={draft.photo_url}
+                    onChange={(e) => handleItemFieldChange(item.id, 'photo_url', e.target.value)}
+                  >
+                    {PHOTO_OPTIONS.map((photoUrl) => (
+                      <option key={photoUrl} value={photoUrl}>
+                        {photoUrl.split('/').pop()}
+                      </option>
+                    ))}
+                  </select>
+                  {rowErrors.photo ? <p style={{ color: 'red' }}>{rowErrors.photo}</p> : null}
+                </td>
+                <td>
                   <input
-                    type="number"
-                    min={0}
-                    step={1}
-                    value={draft.price_cents}
-                    onChange={(e) => handleItemFieldChange(item.id, 'price_cents', e.target.value)}
+                    type="text"
+                    inputMode="decimal"
+                    value={draft.price_dollars}
+                    onChange={(e) => handleItemFieldChange(item.id, 'price_dollars', e.target.value)}
                   />
+                  {rowErrors.price ? <p style={{ color: 'red' }}>{rowErrors.price}</p> : null}
                 </td>
                 <td>
                   <input

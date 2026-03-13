@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from ..config import settings
 from ..db import get_db
-from ..models import MenuItem, Order, OrderStatus
+from ..models import MenuItem, Order, OrderStatus, StripeWebhookEvent
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +24,9 @@ class CheckoutRequest(BaseModel):
 
 
 @router.post("/checkout/session")
-def create_checkout_session(
-    payload: CheckoutRequest, db: Session = Depends(get_db)
-):
-    """
-    Load the order from DB, build Stripe line items, create a Checkout Session,
-    persist the session ID on the order, and return the redirect URL.
-    """
+def create_checkout_session(payload: CheckoutRequest, db: Session = Depends(get_db)):
     if not settings.STRIPE_SECRET_KEY:
-        raise HTTPException(
-            status_code=503, detail="Stripe is not configured on this server"
-        )
+        raise HTTPException(status_code=503, detail="Stripe is not configured on this server")
 
     import stripe  # imported here so the module still loads when stripe is not installed
 
@@ -73,21 +65,14 @@ def create_checkout_session(
 
     order.stripe_session_id = session.id
     db.commit()
-    logger.info("Stripe Checkout session %s created for order %s", session.id, order.id)
 
-    return {"url": session.url, "session_id": session.id}
+    return {"url": session.url, "checkout_url": session.url, "session_id": session.id}
 
 
 @router.post("/stripe/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    """
-    Receive Stripe webhook events. Verifies the signature, then on
-    checkout.session.completed marks the order as PAID.
-    """
     if not settings.STRIPE_WEBHOOK_SECRET:
-        raise HTTPException(
-            status_code=503, detail="Stripe webhook secret is not configured"
-        )
+        raise HTTPException(status_code=503, detail="Stripe webhook secret is not configured")
 
     import stripe
 
@@ -97,24 +82,39 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     sig_header = request.headers.get("stripe-signature", "")
 
     try:
-        event = stripe.Webhook.construct_event(
-            raw_body, sig_header, settings.STRIPE_WEBHOOK_SECRET
-        )
+        event = stripe.Webhook.construct_event(raw_body, sig_header, settings.STRIPE_WEBHOOK_SECRET)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid webhook payload")
     except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
+    event_id = event.get("id")
     event_type = event.get("type", "")
+
+    if event_id:
+        already_processed = db.query(StripeWebhookEvent).filter(StripeWebhookEvent.event_id == event_id).first()
+        if already_processed:
+            return {"status": "ok", "idempotent": True}
+
     if event_type == "checkout.session.completed":
         obj = event["data"]["object"]
         order_id_str = obj.get("metadata", {}).get("order_id")
+        session_id = obj.get("id")
+
+        order = None
         if order_id_str:
             order = db.query(Order).get(int(order_id_str))
-            if order:
-                order.status = OrderStatus.PAID
-                order.payment_intent_id = obj.get("payment_intent")
-                db.commit()
-                logger.info("Order %s marked as PAID via Stripe webhook", order_id_str)
+        elif session_id:
+            order = db.query(Order).filter(Order.stripe_session_id == session_id).first()
 
+        if order:
+            order.status = OrderStatus.PAID
+            order.payment_intent_id = obj.get("payment_intent")
+            if session_id:
+                order.stripe_session_id = session_id
+
+    if event_id:
+        db.add(StripeWebhookEvent(event_id=event_id, event_type=event_type))
+
+    db.commit()
     return {"status": "ok"}

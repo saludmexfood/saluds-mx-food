@@ -130,9 +130,10 @@ else
   stripe_resp=$(curl -sf -X POST "$BACKEND_URL/api/public/checkout/session" \
     -H "Content-Type: application/json" \
     -d "{\"order_id\": $order_id}")
-  stripe_url=$(echo "$stripe_resp" | jq -r '.url')
+  stripe_url=$(echo "$stripe_resp" | jq -r '.url // .checkout_url')
   stripe_sid=$(echo "$stripe_resp" | jq -r '.session_id')
   [ -n "$stripe_url" ] && [ "$stripe_url" != "null" ] || fail "Stripe session creation failed: $stripe_resp"
+  echo "$stripe_url" | grep -Eq '^https://checkout\.stripe\.com/' || fail "Expected Stripe checkout URL, got: $stripe_url"
   pass "Stripe checkout session created (session_id: $stripe_sid)"
 fi
 

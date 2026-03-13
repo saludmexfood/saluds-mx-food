@@ -18,12 +18,15 @@ def create_order(payload: OrderCreate, db: Session = Depends(get_db)):
     if payload.pickup_or_delivery == "pickup":
         payload.delivery_address = None
 
+    if payload.delivery_fee_cents < 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="delivery_fee_cents must be non-negative")
+
     order = Order(
         customer_id=payload.customer_id,
         phone=payload.phone,
         email=payload.email,
         pickup_or_delivery=payload.pickup_or_delivery,
-        delivery_fee_cents=500 if payload.pickup_or_delivery == "delivery" else 0,
+        delivery_fee_cents=payload.delivery_fee_cents if payload.pickup_or_delivery == "delivery" else 0,
         delivery_address=payload.delivery_address,
         comment=payload.comment,
         total_cents=0,
