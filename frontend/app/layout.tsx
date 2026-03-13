@@ -2,17 +2,14 @@ import '../src/styles/globals.css';
 import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'FoodBiz Demo',
-  description: '[PLACEHOLDER] Weekly menu previews',
+  title: "Salud's Mexican Meals",
+  description: 'Weekly Mexican menu and ordering'
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <head />
-      <body>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

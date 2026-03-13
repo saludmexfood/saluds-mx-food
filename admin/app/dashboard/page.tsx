@@ -1,87 +1,17 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import React, { useEffect, useState } from "react";
-
-const baseUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
-
-type QueueMap = Record<string, string[]>;
+import Link from 'next/link';
 
 export default function Dashboard() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [queues, setQueues] = useState<QueueMap>({});
-
-  useEffect(() => {
-    const token = localStorage.getItem("access_token");
-
-    if (!token) {
-      window.location.href = "/login";
-      return;
-    }
-
-    async function loadQueues() {
-      try {
-        const res = await fetch(`${baseUrl}/api/queues`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          if (res.status === 401 || res.status === 403) {
-            localStorage.removeItem("access_token");
-            setAuthError("Please log in.");
-            window.location.href = "/login";
-            return;
-          }
-          const detail = typeof data?.detail === "string" ? data.detail : "Failed to load queues";
-          throw new Error(detail);
-        }
-
-        const nextQueues = data?.queues && typeof data.queues === "object" ? data.queues : {};
-        setQueues(nextQueues as QueueMap);
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : String(e));
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    void loadQueues();
-  }, []);
-
-  if (loading) {
-    return <p>Loading…</p>;
-  }
-  if (authError) {
-    return <p style={{ color: "red" }}>{authError}</p>;
-  }
-  if (error) {
-    return <p style={{ color: "red" }}>Error: {error}</p>;
-  }
-
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Admin Dashboard</h1>
-      <p>
-        <Link href="/menu">Go to Menu Manager</Link>
-      </p>
-      <p>
-        <Link href="/orders">Go to Orders</Link>
-      </p>
-      <ul>
-        {Object.entries(queues).map(([queueName, files]) => (
-          <li key={queueName}>
-            <strong>{queueName}</strong>
-            <ul>
-              {(files || []).map((file) => (
-                <li key={file}>{file}</li>
-              ))}
-            </ul>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <main className="neo panel stack">
+      <h1 className="page-title">Salud Admin Portal</h1>
+      <p style={{ color: 'var(--muted)' }}>Manage weekly menu publishing, orders, and storefront content from one place.</p>
+      <div className="stack">
+        <Link href="/menu">→ Menu management + live preview</Link>
+        <Link href="/orders">→ Orders queue</Link>
+        <Link href="/settings">→ Content and controls</Link>
+      </div>
+    </main>
   );
 }

@@ -1,31 +1,22 @@
-html, body {
-  margin: 0;
-  padding: 0;
-  font-family: Arial, sans-serif;
-  background: #f0f0f0;
-  color: #333;
-}
-
-.container {
-  max-width: 600px;
-  margin: 2rem auto;
-  padding: 1rem;
-  background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-button {
-  padding: 0.5rem 1rem;
-  margin-right: 0.5rem;
-  border: none;
-  background: #007bff;
-  color: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-button:disabled {
-  background: #aaa;
-  cursor: not-allowed;
-}
+:root { --bg: #ece9f5; --panel: rgba(255,255,255,.75); --text: #2b2440; --muted:#645b7c; --line:#d7d0e7; --accent:#7d68c6; }
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at 10% 10%, #f8f5ff,#e7e2f2 55%,#ddd5ec);color:var(--text)}
+a{text-decoration:none;color:inherit}
+.admin-shell{max-width:1200px;margin:1.5rem auto;padding:1rem}
+.neo{background:var(--panel);border:1px solid rgba(255,255,255,.7);box-shadow:8px 8px 18px rgba(167,155,196,.33),-8px -8px 16px rgba(255,255,255,.65);border-radius:18px}
+.admin-nav{display:flex;gap:.6rem;flex-wrap:wrap;padding:.7rem;margin-bottom:1rem}
+.admin-nav a{padding:.45rem .75rem;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.75)}
+.page-title{margin:.2rem 0 .8rem}
+input,select,textarea,button{font:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:linear-gradient(180deg,#fefefe,#ece7f7);border-radius:12px;padding:.5rem .75rem;color:var(--text)}
+button.primary{background:linear-gradient(180deg,#8f79d6,#6d58b9);color:#fff;border-color:transparent}
+label{display:grid;gap:.28rem;font-size:.9rem;color:var(--muted)}
+input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:.5rem .6rem;background:#fff}
+.twocol{display:grid;grid-template-columns:360px 1fr;gap:1rem}
+.stack{display:grid;gap:.65rem}
+.panel{padding:1rem}
+.badge{padding:.2rem .5rem;border-radius:999px;font-size:.78rem;border:1px solid var(--line);display:inline-block}
+.preview-card{background:radial-gradient(circle at 20% 20%, #5f2a89,#12091f 70%);color:#f4ecff;border-radius:18px;padding:1rem;min-height:320px}
+.preview-item{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.15)}
+.err{color:#b00020}
+@media (max-width:900px){.twocol{grid-template-columns:1fr}}
