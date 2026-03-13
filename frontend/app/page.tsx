@@ -66,16 +66,16 @@ export default function HomePage() {
   return (
     <PublicShell>
       <main className="public-main">
-        <section className="glass hero-panel centered-hero">
+        <section className="glass liquid-glass hero-panel centered-hero">
           <p className="eyebrow">Salud&apos;s Mexican Meals</p>
           <h1>This Week&apos;s Menu</h1>
           <p>Homestyle Mexican food made fresh for you.</p>
           <a href="#menu-grid" className="primary-btn">Order Now</a>
         </section>
 
-        {loading ? <p className="glass block center">Loading menu…</p> : error ? <p className="glass block error">{error}</p> : !week ? <p className="glass block center">No menu is published yet.</p> : (
+        {loading ? <p className="glass liquid-glass block center">Loading menu…</p> : error ? <p className="glass liquid-glass block error">{error}</p> : !week ? <p className="glass liquid-glass block center">No menu is published yet.</p> : (
           <section id="menu-grid" className="grid-3">
-            <div className="glass block">
+            <div className="glass liquid-glass block">
               <h3 className="center">Featured Plates</h3>
               {activeItems.map((item) => (
                 <article key={item.id} className="menu-item">
@@ -94,7 +94,7 @@ export default function HomePage() {
               ))}
             </div>
 
-            <div className="glass block centered-stack">
+            <div className="glass liquid-glass block centered-stack">
               <h3>Cart</h3>
               {cartItems.length === 0 ? <p>Your cart is empty.</p> : cartItems.map((item) => <p key={item.id}>{item.name} × {cart[item.id]} — {formatPrice(item.price_cents * (cart[item.id] ?? 0))}</p>)}
               <hr />
@@ -103,7 +103,7 @@ export default function HomePage() {
               <p><strong>Total: {formatPrice(totalCents)}</strong></p>
             </div>
 
-            <div className="glass block centered-stack">
+            <div className="glass liquid-glass block centered-stack">
               <h3>Delivery / Checkout</h3>
               <input placeholder="Name" value={delivery.name} onChange={(e) => setDelivery({ ...delivery, name: e.target.value })} />
               <input placeholder="Phone" value={delivery.phone} onChange={(e) => setDelivery({ ...delivery, phone: e.target.value })} />

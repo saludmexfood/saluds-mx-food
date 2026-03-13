@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="glass panel admin-login">
+    <main className="glass liquid-glass panel admin-login">
       <h1 className="page-title">Admin Login</h1>
       <p style={{ color: 'var(--muted)' }}>Welcome back. Please enter your admin password.</p>
       <form onSubmit={handleSubmit} className="stack">

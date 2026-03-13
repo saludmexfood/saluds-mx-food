@@ -43,7 +43,7 @@ export default function SettingsPage() {
 
   return (
     <main className="twocol">
-      <section className="glass panel stack">
+      <section className="glass liquid-glass panel stack">
         <h1 className="page-title">Content Settings</h1>
         <label>Hours / pickup days <input value={content.hours} onChange={(e) => setContent({ ...content, hours: e.target.value })} /></label>
         <label>Service area / location info <input value={content.location} onChange={(e) => setContent({ ...content, location: e.target.value })} /></label>
@@ -52,7 +52,7 @@ export default function SettingsPage() {
         <button className="primary" onClick={saveContent}>Save Content Settings</button>
       </section>
 
-      <section className="glass panel stack">
+      <section className="glass liquid-glass panel stack">
         <h2 className="page-title">Emergency Controls</h2>
         {actions.map(({ label, endpoint, key }) => (
           <button key={key} disabled={loadingAction === key} onClick={() => handleAction(key, label, endpoint)}>{label}</button>

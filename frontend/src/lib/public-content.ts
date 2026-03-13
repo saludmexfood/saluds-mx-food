@@ -19,7 +19,7 @@ export const copy = {
     aboutBody2:
       'From weekday comfort meals to special treats, we prepare each order with intention so your table feels welcoming and full.',
     panelTitle: 'Hours & Contact',
-    chatTitle: 'Ask Salud Assistant',
+    chatTitle: "Salud's Helper",
     chatPlaceholder: 'Ask about menu, ingredients, orders, pickup, or contact info…',
     chatNudge: 'I can help with menu items, ordering, pickup/delivery, and contact information.',
     disclaimer: 'Food allergy notice: dishes may contain common allergens. Please ask before ordering.'
@@ -42,7 +42,7 @@ export const copy = {
     aboutBody2:
       'Desde comidas reconfortantes hasta postres especiales, preparamos cada orden para servir a nuestra comunidad con cariño.',
     panelTitle: 'Horario y Contacto',
-    chatTitle: 'Asistente de Salud',
+    chatTitle: "Salud's Helper",
     chatPlaceholder: 'Pregunta sobre menú, ingredientes, pedidos, entrega o contacto…',
     chatNudge: 'Te puedo ayudar con menú, pedidos, entrega/recoger y contacto.',
     disclaimer: 'Aviso de alergias: los platillos pueden contener alérgenos comunes. Pregunta antes de ordenar.'

@@ -1,0 +1,37 @@
+<svg width="1920" height="1200" viewBox="0 0 1920 1200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="base" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(960 120) rotate(90) scale(1400 1800)">
+      <stop stop-color="#472336"/>
+      <stop offset="0.45" stop-color="#21111d"/>
+      <stop offset="1" stop-color="#0A060B"/>
+    </radialGradient>
+    <radialGradient id="petal" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 0) scale(1 1)">
+      <stop stop-color="#8E5174" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#8E5174" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="gold" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(0 0) scale(1 1)">
+      <stop stop-color="#DCB57A" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#DCB57A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1920" height="1200" fill="url(#base)"/>
+
+  <g opacity="0.75">
+    <path d="M200 260C270 170 380 160 455 236C538 320 534 440 450 520C370 595 254 580 182 488C108 395 126 294 200 260Z" fill="url(#petal)" transform="translate(260 80) scale(1.4)"/>
+    <path d="M200 260C270 170 380 160 455 236C538 320 534 440 450 520C370 595 254 580 182 488C108 395 126 294 200 260Z" fill="url(#petal)" transform="translate(1320 520) scale(1.2) rotate(18 320 320)"/>
+    <path d="M200 260C270 170 380 160 455 236C538 320 534 440 450 520C370 595 254 580 182 488C108 395 126 294 200 260Z" fill="url(#petal)" transform="translate(1180 -90) scale(1) rotate(-22 320 320)"/>
+  </g>
+
+  <g opacity="0.6">
+    <circle cx="380" cy="210" r="220" fill="url(#gold)"/>
+    <circle cx="1500" cy="840" r="280" fill="url(#gold)"/>
+    <circle cx="1380" cy="210" r="190" fill="url(#gold)"/>
+  </g>
+
+  <g stroke="rgba(255,255,255,0.09)" stroke-width="1.2" fill="none" opacity="0.42">
+    <path d="M-60 1030C360 840 660 860 1080 1040C1310 1138 1580 1180 1980 1036"/>
+    <path d="M-40 820C312 690 710 700 1048 860C1390 1025 1650 1020 1986 900"/>
+    <circle cx="960" cy="600" r="420"/>
+    <circle cx="960" cy="600" r="520"/>
+  </g>
+</svg>

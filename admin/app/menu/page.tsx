@@ -68,7 +68,7 @@ export default function MenuPage(){
   return <main>
     <h1 className="page-title">Menu Management</h1>{err && <p className="err">{err}</p>}
     <div className="twocol">
-      <section className="glass panel stack orbit-panel">
+      <section className="glass liquid-glass panel stack orbit-panel">
         <h3>Create Week</h3>
         <label>Starts at <input type="date" value={weekForm.starts_at} onChange={e=>setWeekForm({...weekForm,starts_at:e.target.value})}/></label>
         <label>Selling days <input value={weekForm.selling_days} onChange={e=>setWeekForm({...weekForm,selling_days:e.target.value})}/></label>
@@ -100,9 +100,9 @@ export default function MenuPage(){
         </div>
       </section>
 
-      <section className="glass panel">
+      <section className="glass liquid-glass panel">
         <h3>Live Preview {publishedWeek ? <span className="badge">Public week #{publishedWeek.id}</span> : <span className="badge">No published week</span>}</h3>
-        <div className="preview-card glass">
+        <div className="preview-card glass liquid-glass">
           <h4>This Week's Menu</h4>
           <p>{selectedWeek?.selling_days || 'Fridays'}</p>
           {(items || []).map(item=><div key={item.id} className="preview-item"><span>{item.name} {!item.available && '(hidden)'}</span><strong>{dollars(item.price_cents)}</strong><button onClick={()=>updateItem(item)}>Edit</button></div>)}
