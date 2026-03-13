@@ -33,7 +33,9 @@ export default function MenuPage(){
   useEffect(()=>{ if(selectedWeekId) loadItems(Number(selectedWeekId)).catch(e=>setErr(String(e))); else setItems([]); },[selectedWeekId]);
 
   async function createWeek(){
-    setErr(''); const res=await createMenuWeek(weekForm); if(!res.ok) return setErr('Could not create week'); await loadWeeks(); setSelectedWeekId(res.data.id);
+    if(!weekForm.starts_at) return setErr('Start date is required.');
+    const payload = { ...weekForm, starts_at: new Date(`${weekForm.starts_at}T00:00:00`).toISOString() };
+    setErr(''); const res=await createMenuWeek(payload); if(!res.ok) return setErr(`Could not create week: ${(res.data as any)?.detail || 'Invalid request'}`); await loadWeeks(); setSelectedWeekId(res.data.id);
   }
 
   async function addItem(){
@@ -66,12 +68,12 @@ export default function MenuPage(){
   return <main>
     <h1 className="page-title">Menu Management</h1>{err && <p className="err">{err}</p>}
     <div className="twocol">
-      <section className="neo panel stack">
+      <section className="glass panel stack orbit-panel">
         <h3>Create Week</h3>
         <label>Starts at <input type="date" value={weekForm.starts_at} onChange={e=>setWeekForm({...weekForm,starts_at:e.target.value})}/></label>
         <label>Selling days <input value={weekForm.selling_days} onChange={e=>setWeekForm({...weekForm,selling_days:e.target.value})}/></label>
         <label>Status <select value={weekForm.status} onChange={e=>setWeekForm({...weekForm,status:e.target.value as WeekStatus})}><option>OPEN</option><option>CLOSED</option></select></label>
-        <label><input type="checkbox" checked={weekForm.published} onChange={e=>setWeekForm({...weekForm,published:e.target.checked})}/> Publish now</label>
+        <label><input type="checkbox" checked={weekForm.published} onChange={e=>setWeekForm({...weekForm,published:e.target.checked})}/> Publish week now</label>
         <button className="primary" onClick={createWeek}>Create week</button>
 
         <h3>Select Week</h3>
@@ -98,9 +100,9 @@ export default function MenuPage(){
         </div>
       </section>
 
-      <section className="neo panel">
+      <section className="glass panel">
         <h3>Live Preview {publishedWeek ? <span className="badge">Public week #{publishedWeek.id}</span> : <span className="badge">No published week</span>}</h3>
-        <div className="preview-card">
+        <div className="preview-card glass">
           <h4>This Week's Menu</h4>
           <p>{selectedWeek?.selling_days || 'Fridays'}</p>
           {(items || []).map(item=><div key={item.id} className="preview-item"><span>{item.name} {!item.available && '(hidden)'}</span><strong>{dollars(item.price_cents)}</strong><button onClick={()=>updateItem(item)}>Edit</button></div>)}
