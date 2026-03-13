@@ -4,8 +4,6 @@ import { useEffect, useState } from 'react';
 import PublicShell from '../../src/components/PublicShell';
 import { copy, Locale } from '../../src/lib/public-content';
 
-const BACKEND = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8010';
-
 export default function AboutPage() {
   const [locale, setLocale] = useState<Locale>('en');
   const [content, setContent] = useState({
@@ -18,9 +16,14 @@ export default function AboutPage() {
   useEffect(() => {
     const saved = window.localStorage.getItem('salud_locale');
     if (saved === 'en' || saved === 'es') setLocale(saved);
-    fetch(`${BACKEND}/api/public/content`).then((r) => r.ok ? r.json() : null).then((data) => {
-      if (data) setContent((prev) => ({ ...prev, ...data }));
-    });
+    const local = window.localStorage.getItem('salud_content_settings');
+    if (local) {
+      try {
+        setContent((prev) => ({ ...prev, ...JSON.parse(local) }));
+      } catch {
+        // no-op to preserve stable fallback content
+      }
+    }
   }, []);
 
   const t = copy[locale];
@@ -28,7 +31,7 @@ export default function AboutPage() {
   return (
     <PublicShell>
       <main className="public-main about-main">
-        <section className="glass hero-panel about centered-stack">
+        <section className="glass liquid-glass hero-panel about centered-stack">
           <p className="eyebrow">{t.wordmark}</p>
           <h1>{t.aboutTitle}</h1>
           <p>{t.aboutBody}</p>
@@ -36,7 +39,7 @@ export default function AboutPage() {
           <p className="muted">Plates may be served in to-go containers with rice and beans.</p>
         </section>
 
-        <section className="glass block about-info centered-stack">
+        <section className="glass liquid-glass block about-info centered-stack">
           <h3>{t.panelTitle}</h3>
           <p><strong>Salud Parra</strong> · Head Chef</p>
           <p>{content.hours}</p>

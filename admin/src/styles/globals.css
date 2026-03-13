@@ -1,13 +1,30 @@
-:root{--text:#fff3ea;--muted:#f2dccc;--line:rgba(255,255,255,.33);--glass:linear-gradient(140deg,rgba(28,22,33,.63),rgba(77,35,61,.3))}
+:root {
+  --text:#fff3ea;
+  --muted:#f2dccc;
+  --line:rgba(255,255,255,.32);
+  --glass:linear-gradient(145deg,rgba(28,22,33,.64),rgba(89,42,72,.24));
+  --pointer-x:50%;
+  --pointer-y:20%;
+}
 *{box-sizing:border-box}
 html,body{margin:0;padding:0;font-family:Inter,system-ui,sans-serif;color:var(--text)}
 a{color:inherit;text-decoration:none}
-.admin-bg{min-height:100vh;background-image:url('/floral-bg.jpeg'), radial-gradient(circle at 20% 10%, #5c3341, #140b12);background-size:cover;background-position:center;position:relative;padding:1.2rem}
-.admin-overlay{position:absolute;inset:0;background:radial-gradient(circle at 50% 15%, rgba(255,255,255,.22), rgba(34,16,32,.82) 64%)}
-.orb{position:absolute;border-radius:50%;opacity:.5;filter:blur(2px)}
-.orb-a{width:280px;height:280px;top:12%;left:8%;background:radial-gradient(circle, rgba(252,197,133,.42), transparent 65%)}
-.orb-b{width:360px;height:360px;bottom:10%;right:13%;background:radial-gradient(circle, rgba(198,119,221,.4), transparent 68%)}
-.glass{backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);background:var(--glass);border:1px solid var(--line);box-shadow:0 20px 56px rgba(0,0,0,.45), inset 0 1px rgba(255,255,255,.25)}
+
+.admin-bg{min-height:100vh;background-image:url('/floral-bg.svg');background-size:cover;background-position:center;position:relative;padding:1.2rem;overflow:hidden}
+.admin-overlay{position:absolute;inset:0;background:radial-gradient(circle at 50% 12%, rgba(255,223,178,.14), rgba(24,12,22,.84) 62%, rgba(10,6,12,.96))}
+.bg-noise{position:absolute;inset:0;opacity:.07;background-image:radial-gradient(rgba(255,255,255,.6) .5px, transparent .6px);background-size:3px 3px;mix-blend-mode:soft-light}
+.orb{position:absolute;border-radius:50%;opacity:.55;filter:blur(2px)}
+.orb-a{width:320px;height:320px;top:12%;left:8%;background:radial-gradient(circle, rgba(252,197,133,.42), transparent 65%)}
+.orb-b{width:400px;height:400px;bottom:10%;right:12%;background:radial-gradient(circle, rgba(198,119,221,.4), transparent 68%)}
+.orbital-ring{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.12)}
+.admin-ring-1{width:620px;height:620px;left:50%;top:8%;transform:translateX(-50%)}
+.admin-ring-2{width:800px;height:800px;left:50%;top:-6%;transform:translateX(-50%);opacity:.55}
+
+.glass{backdrop-filter:blur(22px) saturate(130%);-webkit-backdrop-filter:blur(22px) saturate(130%);background:var(--glass);border:1px solid var(--line);box-shadow:0 20px 56px rgba(0,0,0,.45),inset 0 1px rgba(255,255,255,.28),inset 0 -24px 42px rgba(206,142,103,.08)}
+.liquid-glass{position:relative;overflow:hidden}
+.liquid-glass::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at var(--pointer-x) var(--pointer-y), rgba(255,255,255,.26), rgba(255,255,255,.07) 22%, transparent 52%);mix-blend-mode:screen;pointer-events:none}
+.liquid-glass::after{content:'';position:absolute;inset:1px;border-radius:inherit;border-top:1px solid rgba(255,255,255,.4);border-left:1px solid rgba(255,255,255,.2);border-right:1px solid rgba(255,255,255,.08);pointer-events:none}
+
 .admin-shell{max-width:1200px;margin:0 auto;position:relative;z-index:1;display:grid;gap:1rem}
 .admin-nav{display:flex;gap:.55rem;flex-wrap:wrap;padding:.85rem;border-radius:999px;justify-content:center}
 .admin-nav a,.admin-nav button{border:1px solid var(--line);padding:.45rem .78rem;border-radius:999px;background:rgba(255,255,255,.12);color:var(--text)}
@@ -22,7 +39,7 @@ input,select,textarea{border:1px solid var(--line);border-radius:10px;padding:.5
 .panel{padding:1rem;border-radius:24px}
 .badge{padding:.2rem .5rem;border-radius:999px;font-size:.78rem;border:1px solid var(--line);display:inline-block}
 .preview-card{border-radius:20px;padding:1rem;min-height:320px}
-.preview-item{display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.16)}
+.preview-item{display:flex;justify-content:space-between;padding:.45rem 0;border-bottom:1px solid rgba(255,255,255,.16);gap:.5rem;align-items:center}
 .err{color:#ffc0c0}
 .admin-login{max-width:460px;margin:4rem auto}
 .orbit-panel{position:relative;overflow:hidden}
