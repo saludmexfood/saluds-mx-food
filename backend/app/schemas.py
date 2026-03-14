@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional
 from pydantic import BaseModel
 import enum
 
@@ -17,7 +17,6 @@ class OrderStatus(str, enum.Enum):
     PAID = "PAID"
 
 
-# MenuItem Schemas
 class MenuItemBase(BaseModel):
     menu_week_id: int
     name: str
@@ -47,7 +46,6 @@ class MenuItemUpdate(BaseModel):
     available: Optional[bool] = None
 
 
-# MenuWeek Schemas
 class MenuWeekBase(BaseModel):
     selling_days: str
     status: WeekStatus = WeekStatus.OPEN
@@ -75,17 +73,34 @@ class MenuWeekUpdate(BaseModel):
     starts_at: Optional[datetime] = None
 
 
-# Customer Schemas
 class CustomerBase(BaseModel):
     name: str
     phone: str
     email: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    zip_code: Optional[str] = None
+    additional_phones: List[str] = []
+    additional_emails: List[str] = []
     sms_opt_in: bool = False
     email_opt_in: bool = False
 
 
 class CustomerCreate(CustomerBase):
     pass
+
+
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    zip_code: Optional[str] = None
+    additional_phones: Optional[List[str]] = None
+    additional_emails: Optional[List[str]] = None
+    sms_opt_in: Optional[bool] = None
+    email_opt_in: Optional[bool] = None
 
 
 class CustomerRead(CustomerBase):
@@ -96,7 +111,6 @@ class CustomerRead(CustomerBase):
         orm_mode = True
 
 
-# OrderItem Schemas
 class OrderItemBase(BaseModel):
     menu_item_id: int
     qty: int
@@ -114,9 +128,9 @@ class OrderItemRead(OrderItemBase):
         orm_mode = True
 
 
-# Order Schemas
 class OrderBase(BaseModel):
     customer_id: Optional[int] = None
+    customer_name: Optional[str] = None
     phone: str
     email: Optional[str] = None
     pickup_or_delivery: str
@@ -128,6 +142,19 @@ class OrderBase(BaseModel):
 
 class OrderCreate(OrderBase):
     items: List[OrderItemCreate]
+
+
+class OrderUpdate(BaseModel):
+    customer_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    pickup_or_delivery: Optional[str] = None
+    delivery_fee_cents: Optional[int] = None
+    delivery_address: Optional[str] = None
+    comment: Optional[str] = None
+    status: Optional[OrderStatus] = None
+    price_adjustment_cents: Optional[int] = 0
+    items: Optional[List[OrderItemCreate]] = None
 
 
 class OrderRead(OrderBase):
@@ -171,3 +198,11 @@ class OrdersTally(BaseModel):
     item_counts: List[ItemCount]
     special_requests: List[SpecialRequest]
     delivery_list: List[DeliveryInfo]
+
+
+class SiteSettingsRead(BaseModel):
+    data: dict[str, Any]
+
+
+class SiteSettingsUpdate(BaseModel):
+    data: dict[str, Any]

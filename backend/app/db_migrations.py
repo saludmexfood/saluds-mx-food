@@ -162,6 +162,25 @@ def ensure_legacy_compat_columns(engine: Engine) -> None:
                         "UPDATE menu_items "
                         f"SET available = COALESCE({', '.join(available_fallbacks)})",
                     )
+
+            if _table_exists(conn, dialect, "customers"):
+                customer_cols = _column_names(conn, dialect, "customers")
+                customer_additions = [
+                    ("address", "ALTER TABLE customers ADD COLUMN address VARCHAR"),
+                    ("city", "ALTER TABLE customers ADD COLUMN city VARCHAR"),
+                    ("zip_code", "ALTER TABLE customers ADD COLUMN zip_code VARCHAR"),
+                    ("additional_phones", "ALTER TABLE customers ADD COLUMN additional_phones TEXT"),
+                    ("additional_emails", "ALTER TABLE customers ADD COLUMN additional_emails TEXT"),
+                ]
+                for column_name, statement in customer_additions:
+                    if column_name not in customer_cols and _safe_execute(conn, statement):
+                        customer_cols.add(column_name)
+
+            if _table_exists(conn, dialect, "orders"):
+                order_cols = _column_names(conn, dialect, "orders")
+                if "customer_name" not in order_cols:
+                    _safe_execute(conn, "ALTER TABLE orders ADD COLUMN customer_name VARCHAR")
+
     except SQLAlchemyError as exc:
         logger.exception("Database unreachable during startup migrations")
         raise RuntimeError("Database unreachable during startup migrations") from exc
