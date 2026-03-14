@@ -19,7 +19,7 @@ const cents = (s:string)=>Math.round(Number(s||0)*100);
 export default function MenuPage(){
   const [weeks,setWeeks]=useState<MenuWeek[]>([]); const [selectedWeekId,setSelectedWeekId]=useState<number|''>('');
   const [items,setItems]=useState<MenuItem[]>([]); const [err,setErr]=useState(''); const [status,setStatus]=useState('');
-  const [weekForm,setWeekForm]=useState({starts_at:'',published:false});
+  const [weekForm,setWeekForm]=useState({starts_at:''});
   const [itemForm,setItemForm]=useState({name:'',description:'',photo_url:'/static/menu_photos/placeholder.svg',price_dollars:'',available:true});
   const [presets, setPresets] = useState(BASE_PRESETS);
 
@@ -38,7 +38,7 @@ export default function MenuPage(){
 
   async function createWeek(){
     if(!weekForm.starts_at) return setErr('Date is required.');
-    const payload = { selling_days: 'Fridays', status:'OPEN', published:weekForm.published, starts_at: new Date(`${weekForm.starts_at}T00:00:00`).toISOString() };
+    const payload = { selling_days: 'Fridays', status:'OPEN', published:false, starts_at: new Date(`${weekForm.starts_at}T00:00:00`).toISOString() };
     setErr(''); const res=await createMenuWeek(payload);
     if(!res.ok) return setErr(`Could not create week: ${(res.data as any)?.detail || 'Invalid request'}`);
     await loadWeeks(); setSelectedWeekId(res.data.id); setStatus('Week posted draft is ready.');
@@ -82,7 +82,6 @@ export default function MenuPage(){
       <section className="glass liquid-glass panel stack">
         <h3 className="centered-text">Which day will the food be ready?</h3>
         <label>Date picker <input type="date" value={weekForm.starts_at} onChange={e=>setWeekForm({...weekForm,starts_at:e.target.value})}/></label>
-        <label><input type="checkbox" checked={weekForm.published} onChange={e=>setWeekForm({...weekForm,published:e.target.checked})}/> Publish week now</label>
 
         <h3 className="centered-text">Add Item</h3>
         <label>Food for this week <input value={itemForm.name} onChange={e=>setItemForm({...itemForm,name:e.target.value})}/></label>
@@ -92,9 +91,9 @@ export default function MenuPage(){
         <label>Take a picture <input type="file" accept="image/*" capture="environment" onChange={e=>handleUpload(e.target.files?.[0])}/></label>
 
         <div className="stack">
-          <button className="primary" onClick={addItem}>Add item to week</button>
-          <button className="primary" onClick={createWeek}>Post Menu</button>
-          <button onClick={sendMenuPlaceholder}>Send Menu</button>
+          <button className="primary pill-btn" onClick={addItem}>Add item to week</button>
+          <button className="primary pill-btn" onClick={createWeek}>Post Menu</button>
+          <button className="pill-btn" onClick={sendMenuPlaceholder}>Send Menu</button>
         </div>
 
         <h3 className="centered-text">Select Week</h3>

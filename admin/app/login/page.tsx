@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { setAdminSession } from '../../src/lib/auth';
 
@@ -15,7 +15,15 @@ export default function LoginPage() {
   const [pin, setPin] = useState('');
   const [forgotStatus, setForgotStatus] = useState('');
   const [pinVerified, setPinVerified] = useState(false);
+  const [recovery, setRecovery] = useState({ pin: '4026', destination_email: 'parrasalud@gmail.com', destination_phone: '6202621073' });
   const router = useRouter();
+
+  useEffect(() => {
+    fetch(`${BACKEND}/api/public/settings`).then((res) => res.json()).then((data) => {
+      const r = data?.data?.recovery;
+      if (r) setRecovery((prev) => ({ ...prev, ...r }));
+    }).catch(() => undefined);
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -39,9 +47,9 @@ export default function LoginPage() {
   }
 
   function verifyPin() {
-    if (pin === '4026') {
+    if (pin === recovery.pin) {
       setPinVerified(true);
-      setForgotStatus('PIN verified. Choose email or text reset placeholder.');
+      setForgotStatus(`PIN verified. Choose email or text reset placeholder for ${recovery.destination_email} or ${recovery.destination_phone}.`);
       return;
     }
     setForgotStatus('Invalid PIN.');

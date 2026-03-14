@@ -5,13 +5,10 @@ import { ReactNode, useEffect, useState } from 'react';
 import { clearAdminSession, hasAdminSession } from '../lib/auth';
 
 export default function AdminFrame({ children }: { children: ReactNode }) {
-  const [ready, setReady] = useState(false);
-  const [authed, setAuthed] = useState(false);
+  const [authed, setAuthed] = useState<boolean>(() => (typeof window !== 'undefined' ? hasAdminSession() : false));
 
   useEffect(() => {
-    const ok = hasAdminSession();
-    setAuthed(ok);
-    setReady(true);
+    setAuthed(hasAdminSession());
   }, []);
 
   useEffect(() => {
@@ -24,8 +21,6 @@ export default function AdminFrame({ children }: { children: ReactNode }) {
     window.addEventListener('pointermove', updatePointer, { passive: true });
     return () => window.removeEventListener('pointermove', updatePointer);
   }, []);
-
-  if (!ready) return null;
 
   return (
     <div className="admin-bg">

@@ -35,9 +35,11 @@ export default function HomePage() {
   const [form, setForm] = useState<DeliveryForm>({ name: '', phone: '', address: '', city: '', zip: '', pickupTime: '' });
   const [checkoutError, setCheckoutError] = useState('');
   const [confirmData, setConfirmData] = useState<{ confirmation: string; message: string } | null>(null);
+  const [heroTitle, setHeroTitle] = useState("This Week's Menu");
 
   useEffect(() => {
     fetch(`${BACKEND}/api/public/menu/`).then((res) => res.json()).then((data) => data?.id && setWeek(data)).catch((err) => setError(String(err))).finally(() => setLoading(false));
+    fetch(`${BACKEND}/api/public/settings`).then((res) => res.json()).then((data) => { if (data?.data?.homepage?.title) setHeroTitle(data.data.homepage.title); }).catch(() => undefined);
   }, []);
 
   const activeItems = useMemo(() => week ? week.items.filter((i) => i.available) : [], [week]);
@@ -101,7 +103,7 @@ export default function HomePage() {
     <PublicShell>
       <main className="public-main no-scroll-layout">
         <section className="glass liquid-glass hero-panel centered-hero">
-          <h1>This Week&apos;s Menu</h1>
+          <h1>{heroTitle}</h1>
           {loading ? <p className="center">Loading menu…</p> : error ? <p className="error">{error}</p> : !week ? <p>No menu is published yet.</p> : (
             <div className="hero-menu-list">
               {activeItems.map((item) => (
@@ -134,7 +136,7 @@ export default function HomePage() {
               <p><strong>Total: {formatPrice(totalCents)}</strong></p>
             </div>
             <div className="mode-row">
-              <button className={mode === 'delivery' ? 'primary-btn' : ''} onClick={() => setMode('delivery')}>Delivery</button>
+              <button className={mode === 'delivery' ? 'primary-btn' : ''} onClick={() => setMode('delivery')}>Delivery (+$3.00)</button>
               <button className={mode === 'pickup' ? 'primary-btn' : ''} onClick={() => setMode('pickup')}>Pickup</button>
             </div>
 

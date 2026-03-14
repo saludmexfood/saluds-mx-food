@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, func
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Enum, Text, func
 from .db import Base
 from sqlalchemy.orm import relationship
 import enum
@@ -12,13 +12,11 @@ class WeekStatus(str, enum.Enum):
 class MenuWeek(Base):
     __tablename__ = "menu_weeks"
     id = Column(Integer, primary_key=True, index=True)
-    selling_days = Column(String, nullable=False)  # e.g., "Mon,Wed,Fri"
+    selling_days = Column(String, nullable=False)
     status = Column(Enum(WeekStatus), default=WeekStatus.OPEN, nullable=False)
     published = Column(Boolean, default=False, nullable=False)
     starts_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
-
-    # Legacy compatibility columns retained for older databases
     week_start_date = Column(DateTime, nullable=False, default=func.now())
     is_published = Column(Boolean, default=False, nullable=False)
 
@@ -45,6 +43,11 @@ class Customer(Base):
     name = Column(String, nullable=False)
     phone = Column(String, nullable=False, unique=True)
     email = Column(String, nullable=True, unique=True)
+    address = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    zip_code = Column(String, nullable=True)
+    additional_phones = Column(Text, nullable=True)
+    additional_emails = Column(Text, nullable=True)
     sms_opt_in = Column(Boolean, default=False, nullable=False)
     email_opt_in = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
@@ -64,9 +67,10 @@ class Order(Base):
     __tablename__ = "orders"
     id = Column(Integer, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("customers.id"), nullable=True)
+    customer_name = Column(String, nullable=True)
     phone = Column(String, nullable=False)
     email = Column(String, nullable=True)
-    pickup_or_delivery = Column(String, nullable=False)  # "pickup" or "delivery"
+    pickup_or_delivery = Column(String, nullable=False)
     delivery_fee_cents = Column(Integer, default=0, nullable=False)
     delivery_address = Column(String, nullable=True)
     comment = Column(String, nullable=True)
@@ -77,7 +81,7 @@ class Order(Base):
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
 
     customer = relationship("Customer", back_populates="orders")
-    items = relationship("OrderItem", back_populates="order")
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
 
 
 class OrderItem(Base):
@@ -90,6 +94,14 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
     menu_item = relationship("MenuItem")
+
+
+class SiteSetting(Base):
+    __tablename__ = "site_settings"
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String, nullable=False, unique=True, index=True)
+    value_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now(), nullable=False)
 
 
 class StripeWebhookEvent(Base):
