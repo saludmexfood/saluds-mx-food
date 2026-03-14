@@ -42,9 +42,9 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="twocol">
+    <main className="twocol stack">
       <section className="glass liquid-glass panel stack">
-        <h1 className="page-title">Content Settings</h1>
+        <h1 className="page-title centered-text">Content Settings</h1>
         <label>Hours / pickup days <input value={content.hours} onChange={(e) => setContent({ ...content, hours: e.target.value })} /></label>
         <label>Service area / location info <input value={content.location} onChange={(e) => setContent({ ...content, location: e.target.value })} /></label>
         <label>Phone <input value={content.phone} onChange={(e) => setContent({ ...content, phone: e.target.value })} /></label>
@@ -53,11 +53,11 @@ export default function SettingsPage() {
       </section>
 
       <section className="glass liquid-glass panel stack">
-        <h2 className="page-title">Emergency Controls</h2>
+        <h2 className="page-title centered-text">Emergency Controls</h2>
         {actions.map(({ label, endpoint, key }) => (
           <button key={key} disabled={loadingAction === key} onClick={() => handleAction(key, label, endpoint)}>{label}</button>
         ))}
-        {status && <p>{status}</p>}
+        {status && <p className="centered-text">{status}</p>}
       </section>
     </main>
   );

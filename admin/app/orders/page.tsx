@@ -1,7 +1,6 @@
 'use client';
 
-import Link from 'next/link';
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getAdminOrders, getAdminOrdersTally, updateAdminOrderStatus } from '../../src/lib/api';
 
 interface OrderItem {
@@ -22,22 +21,17 @@ interface Order {
   total_cents: number;
   status: string;
   items: OrderItem[];
+  quantity_confirmed?: boolean;
 }
 
 interface OrdersTally {
   total_orders: number;
   total_pickup_orders: number;
   total_delivery_orders: number;
-  delivery_list?: Array<{ order_id: number; name?: string | null }>;
 }
 
-const STATUS_OPTIONS = ['PENDING', 'CONFIRMED', 'PAID', 'COMPLETED', 'CANCELLED'];
-
 function formatCents(cents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD'
-  }).format((cents || 0) / 100);
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((cents || 0) / 100);
 }
 
 export default function OrdersPage() {
@@ -45,53 +39,26 @@ export default function OrdersPage() {
   const [tally, setTally] = useState<OrdersTally | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [authError, setAuthError] = useState('');
-  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
-  const [updatingOrderId, setUpdatingOrderId] = useState<number | null>(null);
+  const [manualPhone, setManualPhone] = useState('');
 
-  const deliveryNameMap = useMemo(() => {
-    const entries = tally?.delivery_list || [];
-    return new Map(entries.map((entry) => [entry.order_id, entry.name || '']));
-  }, [tally]);
-
-  const getCustomerName = (order: Order): string => {
-    const deliveryName = deliveryNameMap.get(order.id);
-    if (deliveryName) {
-      return deliveryName;
-    }
-    return order.email || order.phone;
-  };
-
-  const loadOrders = async () => {
-    const ordersRes = await getAdminOrders();
-    if (!ordersRes.ok) {
-      if (ordersRes.status === 401 || ordersRes.status === 403) {
-        localStorage.removeItem('access_token');
-        setAuthError('Please log in.');
-        window.location.href = '/login';
-        return;
-      }
-      throw new Error((ordersRes.data as { detail?: string })?.detail || 'Failed to load orders');
-    }
-    setOrders(Array.isArray(ordersRes.data) ? (ordersRes.data as Order[]) : []);
-  };
+  const grouped = useMemo(() => ({
+    pickup: orders.filter((o) => o.pickup_or_delivery === 'pickup'),
+    delivery: orders.filter((o) => o.pickup_or_delivery === 'delivery')
+  }), [orders]);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!localStorage.getItem('access_token')) {
       window.location.href = '/login';
       return;
     }
 
-    Promise.allSettled([loadOrders(), getAdminOrdersTally()])
+    Promise.allSettled([getAdminOrders(), getAdminOrdersTally()])
       .then((results) => {
         const ordersResult = results[0];
         const tallyResult = results[1];
-
-        if (ordersResult.status === 'rejected') {
-          throw ordersResult.reason;
+        if (ordersResult.status === 'fulfilled' && ordersResult.value.ok) {
+          setOrders((ordersResult.value.data as Order[]).map((o) => ({ ...o, quantity_confirmed: false })));
         }
-
         if (tallyResult.status === 'fulfilled' && tallyResult.value.ok) {
           setTally(tallyResult.value.data as OrdersTally);
         }
@@ -100,132 +67,111 @@ export default function OrdersPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleUpdateStatus = async (orderId: number, status: string) => {
-    setUpdatingOrderId(orderId);
-    setError('');
-    try {
-      const res = await updateAdminOrderStatus(orderId, status);
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem('access_token');
-          setAuthError('Please log in.');
-          window.location.href = '/login';
-          return;
-        }
-        throw new Error((res.data as { detail?: string })?.detail || 'Failed to update order status');
-      }
-
-      setOrders((current) =>
-        current.map((order) =>
-          order.id === orderId ? { ...order, status: (res.data as Order).status || status } : order
-        )
-      );
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setUpdatingOrderId(null);
+  async function setStatus(orderId: number, status: string) {
+    const res = await updateAdminOrderStatus(orderId, status);
+    if (!res.ok) {
+      setError('Failed to update order status.');
+      return;
     }
-  };
+    setOrders((current) => current.map((order) => order.id === orderId ? { ...order, status } : order));
+  }
 
-  if (loading) {
-    return <p>Loading…</p>;
+  function addManualOrder() {
+    if (!manualPhone.trim()) return;
+    const next: Order = {
+      id: Date.now(),
+      created_at: new Date().toISOString(),
+      phone: manualPhone,
+      email: null,
+      pickup_or_delivery: 'pickup',
+      total_cents: 0,
+      status: 'PENDING',
+      items: [],
+      comment: 'Manual order placeholder',
+      quantity_confirmed: true
+    };
+    setOrders((current) => [next, ...current]);
+    setManualPhone('');
   }
-  if (authError) {
-    return <p style={{ color: 'red' }}>{authError}</p>;
+
+  function updateQty(orderId: number, itemId: number, delta: number) {
+    setOrders((current) => current.map((order) => {
+      if (order.id !== orderId) return order;
+      const items = order.items.map((item) => item.id === itemId ? { ...item, qty: Math.max(1, item.qty + delta) } : item);
+      return { ...order, items };
+    }));
   }
+
+  function removeItem(orderId: number, itemId: number) {
+    setOrders((current) => current.map((order) => order.id === orderId ? { ...order, items: order.items.filter((item) => item.id !== itemId) } : order));
+  }
+
+  function addDessert(orderId: number) {
+    setOrders((current) => current.map((order) => {
+      if (order.id !== orderId) return order;
+      const dessert: OrderItem = { id: Date.now(), menu_item_id: 9999, qty: 1, line_total_cents: 600 };
+      return { ...order, items: [...order.items, dessert], total_cents: order.total_cents + 600 };
+    }));
+  }
+
+  if (loading) return <p>Loading…</p>;
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Admin Orders</h1>
-      <p>
-        <Link href="/dashboard">Back to Dashboard</Link>
-      </p>
+    <main className="stack">
+      <section className="glass liquid-glass panel centered-text stack">
+        <h1 className="page-title">Admin Orders</h1>
+        {tally && <p>Total: {tally.total_orders} · Pickup: {tally.total_pickup_orders} · Delivery: {tally.total_delivery_orders}</p>}
+        <div className="manual-row">
+          <input value={manualPhone} onChange={(e) => setManualPhone(e.target.value)} placeholder="Add manual order phone" />
+          <button onClick={addManualOrder}>Add manual order</button>
+        </div>
+        {error && <p className="err">{error}</p>}
+      </section>
 
-      {tally && (
-        <p>
-          Total: {tally.total_orders} · Pickup: {tally.total_pickup_orders} · Delivery: {tally.total_delivery_orders}
-        </p>
-      )}
-
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px 6px' }}>Created</th>
-            <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px 6px' }}>Customer</th>
-            <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px 6px' }}>Total</th>
-            <th style={{ textAlign: 'left', borderBottom: '1px solid #ddd', padding: '8px 6px' }}>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => (
-            <Fragment key={order.id}>
-              <tr
-                onClick={() => setExpandedOrderId((current) => (current === order.id ? null : order.id))}
-                style={{ cursor: 'pointer' }}
-              >
-                <td style={{ borderBottom: '1px solid #eee', padding: '8px 6px' }}>
-                  {new Date(order.created_at).toLocaleString()}
-                </td>
-                <td style={{ borderBottom: '1px solid #eee', padding: '8px 6px' }}>{getCustomerName(order)}</td>
-                <td style={{ borderBottom: '1px solid #eee', padding: '8px 6px' }}>{formatCents(order.total_cents)}</td>
-                <td
-                  style={{ borderBottom: '1px solid #eee', padding: '8px 6px' }}
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <select
-                    value={order.status}
-                    onChange={(event) => void handleUpdateStatus(order.id, event.target.value)}
-                    disabled={updatingOrderId === order.id}
-                  >
-                    {STATUS_OPTIONS.map((status) => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-              {expandedOrderId === order.id && (
-                <tr>
-                  <td colSpan={4} style={{ background: '#fafafa', padding: '10px 8px', borderBottom: '1px solid #eee' }}>
-                    <div>
-                      <strong>Delivery info:</strong>{' '}
-                      {order.pickup_or_delivery === 'delivery'
-                        ? order.delivery_address || 'No delivery address provided'
-                        : 'Pickup order'}
-                    </div>
-                    {order.comment && (
-                      <div>
-                        <strong>Comment:</strong> {order.comment}
-                      </div>
-                    )}
-                    <div style={{ marginTop: 8 }}>
-                      <strong>Line items</strong>
-                      <ul style={{ marginTop: 4 }}>
-                        {order.items.map((item) => (
-                          <li key={item.id}>
-                            Item #{item.menu_item_id} · Qty {item.qty} · {formatCents(item.line_total_cents)}
-                          </li>
-                        ))}
-                        {order.items.length === 0 && <li>No items found</li>}
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </Fragment>
+      <div className="twocol">
+        <section className="glass liquid-glass panel stack">
+          <h3 className="centered-text">Pickup Orders</h3>
+          {grouped.pickup.map((order) => (
+            <article key={order.id} className="glass liquid-glass panel stack">
+              <p><strong>#{order.id}</strong> · {new Date(order.created_at).toLocaleString()}</p>
+              <p>Customer: {order.email || order.phone}</p>
+              <p>Total: {formatCents(order.total_cents)}</p>
+              <p>Status: {order.status}</p>
+              {(order.items.reduce((sum, item) => sum + item.qty, 0) >= 4 && !order.quantity_confirmed) && <p className="err">High quantity warning: confirm before preparing.</p>}
+              <div className="row-wrap">
+                <button onClick={() => setStatus(order.id, 'COMPLETED')}>Ready for pickup</button>
+                <button onClick={() => setOrders((c) => c.map((o) => o.id === order.id ? { ...o, quantity_confirmed: true } : o))}>Confirm order quantity</button>
+                <button onClick={() => addDessert(order.id)}>Add dessert to customer order</button>
+              </div>
+              {order.items.map((item) => (
+                <div key={item.id} className="row-wrap">
+                  <span>Item #{item.menu_item_id} · Qty {item.qty}</span>
+                  <button onClick={() => updateQty(order.id, item.id, 1)}>+</button>
+                  <button onClick={() => updateQty(order.id, item.id, -1)}>−</button>
+                  <button onClick={() => removeItem(order.id, item.id)}>Remove</button>
+                </div>
+              ))}
+            </article>
           ))}
-          {orders.length === 0 && (
-            <tr>
-              <td colSpan={4} style={{ padding: 12 }}>
-                No orders found.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    </div>
+        </section>
+
+        <section className="glass liquid-glass panel stack">
+          <h3 className="centered-text">Delivery Orders</h3>
+          {grouped.delivery.map((order) => (
+            <article key={order.id} className="glass liquid-glass panel stack">
+              <p><strong>#{order.id}</strong> · {new Date(order.created_at).toLocaleString()}</p>
+              <p>Customer: {order.email || order.phone}</p>
+              <p>Address: {order.delivery_address || 'N/A'}</p>
+              <p>Total: {formatCents(order.total_cents)}</p>
+              <p>Status: {order.status}</p>
+              <div className="row-wrap">
+                <button onClick={() => setStatus(order.id, 'CONFIRMED')}>Delivery on the way</button>
+                <button onClick={() => addDessert(order.id)}>Add dessert to customer order</button>
+              </div>
+            </article>
+          ))}
+        </section>
+      </div>
+    </main>
   );
 }

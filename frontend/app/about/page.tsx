@@ -21,7 +21,7 @@ export default function AboutPage() {
       try {
         setContent((prev) => ({ ...prev, ...JSON.parse(local) }));
       } catch {
-        // no-op to preserve stable fallback content
+        // preserve fallback content
       }
     }
   }, []);
@@ -30,13 +30,10 @@ export default function AboutPage() {
 
   return (
     <PublicShell>
-      <main className="public-main about-main">
+      <main className="public-main about-main no-scroll-layout">
         <section className="glass liquid-glass hero-panel about centered-stack">
-          <p className="eyebrow">{t.wordmark}</p>
           <h1>{t.aboutTitle}</h1>
-          <p>{t.aboutBody}</p>
-          <p>{t.aboutBody2}</p>
-          <p className="muted">Plates may be served in to-go containers with rice and beans.</p>
+          <p className="center about-paragraph">{t.aboutBody} {t.aboutBody2} Plates may be served in to-go containers with rice and beans.</p>
         </section>
 
         <section className="glass liquid-glass block about-info centered-stack">

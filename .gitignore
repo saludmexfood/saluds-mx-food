@@ -25,3 +25,6 @@ token.json
 **/*.pyc
 **/.pytest_cache/
 **/.venv/
+# Local databases
+*.db
+backend/*.db
