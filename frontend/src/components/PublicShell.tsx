@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Locale, copy } from '../lib/public-content';
 
 const CHATBOT_ENDPOINT = process.env.NEXT_PUBLIC_CHATBOT_ENDPOINT || '';
+const ADMIN_LOGIN_URL = process.env.NEXT_PUBLIC_ADMIN_LOGIN_URL || 'http://localhost:3001/login';
 
 type Message = { role: 'user' | 'bot'; text: string };
 
@@ -95,11 +96,12 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       <div className="orbital-ring orbital-1" />
       <div className="orbital-ring orbital-2" />
 
-      <header className="top-nav glass liquid-glass">
-        <p className="wordmark">{t.wordmark}</p>
+      <header className="top-nav">
+        <p className="wordmark">Homestyle Mexican food made fresh for you.</p>
         <nav>
           <Link href="/">Home</Link>
           <Link href="/about">About</Link>
+          <a href={ADMIN_LOGIN_URL}>Saluds Login</a>
         </nav>
         <button className="locale-toggle" onClick={() => setLocale(locale === 'en' ? 'es' : 'en')}>
           {locale.toUpperCase()} / {locale === 'en' ? 'ES' : 'EN'}
@@ -107,21 +109,8 @@ export default function PublicShell({ children }: { children: ReactNode }) {
       </header>
       {children}
 
-      <footer className="glass liquid-glass site-footer">
-        <p>{t.disclaimer}</p>
-        <div className={`social-orbit ${socialOpen ? 'open' : ''}`}>
-          <button className="orbit-toggle" onClick={() => setSocialOpen((v) => !v)} aria-label="Toggle contact options">◎</button>
-          <a href="https://instagram.com" target="_blank" rel="noreferrer">IG</a>
-          <a href="https://facebook.com" target="_blank" rel="noreferrer">FB</a>
-          <a href="https://wa.me/16202621073" target="_blank" rel="noreferrer">WA</a>
-          <a href="tel:+16202621073">Call</a>
-          <a href="sms:+16202621073">SMS</a>
-          <a href="mailto:parrasalud@gmail.com">Email</a>
-        </div>
-      </footer>
-
       <button className={`chat-launcher glass liquid-glass ${chatOpen ? '' : 'attract'}`} onClick={() => setChatOpen((v) => !v)} aria-label="Toggle Salud's Helper">
-        {chatOpen ? '×' : '✦'}
+        {chatOpen ? 'Close' : 'Salud\'s Helper ✦'}
       </button>
       {chatOpen && (
         <aside className="chat-panel glass liquid-glass">
@@ -138,6 +127,24 @@ export default function PublicShell({ children }: { children: ReactNode }) {
           </div>
         </aside>
       )}
+
+      <footer className="site-footer">
+        <div className="footer-line" />
+        <div className="footer-row">
+          <button className="contact-toggle" onClick={() => setSocialOpen((v) => !v)}>Contact us</button>
+          <p>{t.disclaimer}</p>
+        </div>
+        {socialOpen && (
+          <div className="contact-actions glass liquid-glass">
+            <a href="https://instagram.com" target="_blank" rel="noreferrer">Instagram</a>
+            <a href="https://facebook.com" target="_blank" rel="noreferrer">Facebook</a>
+            <a href="https://wa.me/16202621073" target="_blank" rel="noreferrer">WhatsApp</a>
+            <a href="tel:+16202621073">Phone</a>
+            <a href="sms:+16202621073">SMS/Text</a>
+            <a href="mailto:parrasalud@gmail.com">Email</a>
+          </div>
+        )}
+      </footer>
     </div>
   );
 }

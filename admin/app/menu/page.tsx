@@ -1,16 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createMenuItem, createMenuWeek, getMenuWeeks, getWeekItems, updateMenuItem, updateMenuWeek } from '../../src/lib/api';
+import { createMenuItem, createMenuWeek, getMenuWeeks, getWeekItems, updateMenuWeek } from '../../src/lib/api';
 
 type WeekStatus = 'OPEN' | 'CLOSED';
 interface MenuWeek { id:number; selling_days:string; status:WeekStatus; published:boolean; starts_at:string }
 interface MenuItem { id:number; name:string; description?:string; photo_url?:string; price_cents:number; available:boolean }
 
-const PRESETS = [
-  ['Flan', 'Classic caramel flan', '6.00', '/static/menu_photos/placeholder.svg'],
-  ['Mini Cakes', 'Assorted mini cakes', '4.50', '/static/menu_photos/placeholder.svg'],
-  ['Enchiladas Verdes', 'Plate with rice and beans', '10.00', '/static/menu_photos/enchiladas-verdes.svg']
+const BASE_PRESETS = [
+  { name: 'Enchiladas Verdes', description: 'Plate with rice and beans', price_dollars: '10.00', photo_url: '/static/menu_photos/enchiladas-verdes.svg', category: 'food' },
+  { name: 'Flan', description: 'Classic caramel flan', price_dollars: '6.00', photo_url: '/static/menu_photos/placeholder.svg', category: 'dessert' },
+  { name: 'Tres Leches Cake', description: 'Creamy milk cake slice', price_dollars: '5.50', photo_url: '/static/menu_photos/placeholder.svg', category: 'dessert' }
 ];
 
 const dollars = (c:number)=>`$${(c/100).toFixed(2)}`;
@@ -18,30 +18,39 @@ const cents = (s:string)=>Math.round(Number(s||0)*100);
 
 export default function MenuPage(){
   const [weeks,setWeeks]=useState<MenuWeek[]>([]); const [selectedWeekId,setSelectedWeekId]=useState<number|''>('');
-  const [items,setItems]=useState<MenuItem[]>([]); const [err,setErr]=useState('');
-  const [weekForm,setWeekForm]=useState({starts_at:'',selling_days:'Fridays',status:'OPEN' as WeekStatus,published:false});
+  const [items,setItems]=useState<MenuItem[]>([]); const [err,setErr]=useState(''); const [status,setStatus]=useState('');
+  const [weekForm,setWeekForm]=useState({starts_at:'',published:false});
   const [itemForm,setItemForm]=useState({name:'',description:'',photo_url:'/static/menu_photos/placeholder.svg',price_dollars:'',available:true});
+  const [presets, setPresets] = useState(BASE_PRESETS);
 
   const selectedWeek = useMemo(()=>weeks.find(w=>w.id===selectedWeekId),[weeks,selectedWeekId]);
-  const publishedWeek = useMemo(()=>weeks.find(w=>w.published),[weeks]);
 
-  const ensureAuth = ()=>{ if(!localStorage.getItem('access_token')) window.location.href='/login'; };
   async function loadWeeks(){ const res=await getMenuWeeks(); if(!res.ok) throw new Error('Failed to load weeks'); setWeeks(res.data as MenuWeek[]); }
   async function loadItems(weekId:number){ const res=await getWeekItems(weekId); if(!res.ok) throw new Error('Failed to load items'); setItems(res.data as MenuItem[]); }
 
-  useEffect(()=>{ ensureAuth(); loadWeeks().catch(e=>setErr(String(e))); },[]);
+  useEffect(()=>{
+    if(!localStorage.getItem('access_token')) window.location.href='/login';
+    loadWeeks().catch(e=>setErr(String(e)));
+    const localPresets = localStorage.getItem('salud_menu_presets');
+    if (localPresets) setPresets(JSON.parse(localPresets));
+  },[]);
   useEffect(()=>{ if(selectedWeekId) loadItems(Number(selectedWeekId)).catch(e=>setErr(String(e))); else setItems([]); },[selectedWeekId]);
 
   async function createWeek(){
-    if(!weekForm.starts_at) return setErr('Start date is required.');
-    const payload = { ...weekForm, starts_at: new Date(`${weekForm.starts_at}T00:00:00`).toISOString() };
-    setErr(''); const res=await createMenuWeek(payload); if(!res.ok) return setErr(`Could not create week: ${(res.data as any)?.detail || 'Invalid request'}`); await loadWeeks(); setSelectedWeekId(res.data.id);
+    if(!weekForm.starts_at) return setErr('Date is required.');
+    const payload = { selling_days: 'Fridays', status:'OPEN', published:weekForm.published, starts_at: new Date(`${weekForm.starts_at}T00:00:00`).toISOString() };
+    setErr(''); const res=await createMenuWeek(payload);
+    if(!res.ok) return setErr(`Could not create week: ${(res.data as any)?.detail || 'Invalid request'}`);
+    await loadWeeks(); setSelectedWeekId(res.data.id); setStatus('Week posted draft is ready.');
   }
 
   async function addItem(){
     if(!selectedWeekId) return setErr('Select a week first.');
     const payload={menu_week_id:Number(selectedWeekId),name:itemForm.name,description:itemForm.description,photo_url:itemForm.photo_url,price_cents:cents(itemForm.price_dollars),available:itemForm.available};
     const res=await createMenuItem(payload); if(!res.ok) return setErr('Could not create item');
+    const saved = [{ name: itemForm.name, description: itemForm.description, price_dollars: itemForm.price_dollars, photo_url: itemForm.photo_url, category: 'food' }, ...presets];
+    setPresets(saved);
+    localStorage.setItem('salud_menu_presets', JSON.stringify(saved));
     setItemForm({name:'',description:'',photo_url:'/static/menu_photos/placeholder.svg',price_dollars:'',available:true});
     await loadItems(Number(selectedWeekId));
   }
@@ -52,12 +61,6 @@ export default function MenuPage(){
     await updateMenuWeek(Number(selectedWeekId),{published:next}); await loadWeeks();
   }
 
-  async function updateItem(item:MenuItem){
-    const name = prompt('Item name', item.name) || item.name;
-    await updateMenuItem(item.id,{name});
-    await loadItems(Number(selectedWeekId));
-  }
-
   function handleUpload(file?: File) {
     if (!file) return;
     const reader = new FileReader();
@@ -65,48 +68,55 @@ export default function MenuPage(){
     reader.readAsDataURL(file);
   }
 
-  return <main>
-    <h1 className="page-title">Menu Management</h1>{err && <p className="err">{err}</p>}
-    <div className="twocol">
-      <section className="glass liquid-glass panel stack orbit-panel">
-        <h3>Create Week</h3>
-        <label>Starts at <input type="date" value={weekForm.starts_at} onChange={e=>setWeekForm({...weekForm,starts_at:e.target.value})}/></label>
-        <label>Selling days <input value={weekForm.selling_days} onChange={e=>setWeekForm({...weekForm,selling_days:e.target.value})}/></label>
-        <label>Status <select value={weekForm.status} onChange={e=>setWeekForm({...weekForm,status:e.target.value as WeekStatus})}><option>OPEN</option><option>CLOSED</option></select></label>
+  function sendMenuPlaceholder() {
+    const queue = JSON.parse(localStorage.getItem('salud_menu_send_queue') || '[]');
+    queue.push({ week_id: selectedWeekId || null, created_at: new Date().toISOString() });
+    localStorage.setItem('salud_menu_send_queue', JSON.stringify(queue));
+    setStatus('Menu send queued. SMS/email sending will be enabled when integrations are connected.');
+  }
+
+  return <main className="stack">
+    <h1 className="page-title centered-text">Menu Management</h1>{err && <p className="err centered-text">{err}</p>}
+    {status && <p className="muted centered-text">{status}</p>}
+    <div className="twocol menu-grid">
+      <section className="glass liquid-glass panel stack">
+        <h3 className="centered-text">Which day will the food be ready?</h3>
+        <label>Date picker <input type="date" value={weekForm.starts_at} onChange={e=>setWeekForm({...weekForm,starts_at:e.target.value})}/></label>
         <label><input type="checkbox" checked={weekForm.published} onChange={e=>setWeekForm({...weekForm,published:e.target.checked})}/> Publish week now</label>
-        <button className="primary" onClick={createWeek}>Create week</button>
 
-        <h3>Select Week</h3>
-        <select value={selectedWeekId} onChange={e=>setSelectedWeekId(Number(e.target.value) || '')}>
-          <option value="">Choose a week</option>
-          {weeks.map(w=><option key={w.id} value={w.id}>#{w.id} · {new Date(w.starts_at).toLocaleDateString()} · {w.selling_days}</option>)}
-        </select>
-        {selectedWeek && <p><span className="badge">{selectedWeek.published ? 'Published' : 'Draft'}</span> <button onClick={()=>togglePublish(!selectedWeek.published)}>{selectedWeek.published?'Unpublish':'Publish'} Week</button></p>}
+        <h3 className="centered-text">Add Item</h3>
+        <label>Food for this week <input value={itemForm.name} onChange={e=>setItemForm({...itemForm,name:e.target.value})}/></label>
+        <label>Description <textarea rows={2} value={itemForm.description} placeholder="What ingredients/sides are in the Food for this week" onChange={e=>setItemForm({...itemForm,description:e.target.value})}/></label>
+        <label>Price ($) <input value={itemForm.price_dollars} onChange={e=>setItemForm({...itemForm,price_dollars:e.target.value})}/></label>
+        <label>Upload image file <input type="file" accept="image/*" onChange={e=>handleUpload(e.target.files?.[0])}/></label>
+        <label>Take a picture <input type="file" accept="image/*" capture="environment" onChange={e=>handleUpload(e.target.files?.[0])}/></label>
 
-        <h3>Add Item</h3>
         <div className="stack">
-          <label>Name <input value={itemForm.name} onChange={e=>setItemForm({...itemForm,name:e.target.value})}/></label>
-          <label>Description <textarea rows={2} value={itemForm.description} onChange={e=>setItemForm({...itemForm,description:e.target.value})}/></label>
-          <label>Price ($) <input value={itemForm.price_dollars} onChange={e=>setItemForm({...itemForm,price_dollars:e.target.value})}/></label>
-          <label>Preset image URL <input value={itemForm.photo_url} onChange={e=>setItemForm({...itemForm,photo_url:e.target.value})}/></label>
-          <label>Upload image <input type="file" accept="image/*" onChange={e=>handleUpload(e.target.files?.[0])}/></label>
-          <label><input type="checkbox" checked={itemForm.available} onChange={e=>setItemForm({...itemForm,available:e.target.checked})}/> Available</label>
-          <button className="primary" onClick={addItem}>Create item</button>
+          <button className="primary" onClick={addItem}>Add item to week</button>
+          <button className="primary" onClick={createWeek}>Post Menu</button>
+          <button onClick={sendMenuPlaceholder}>Send Menu</button>
         </div>
 
-        <h4>Quick presets</h4>
-        <div className="stack">
-          {PRESETS.map(([name,description,price_dollars,photo_url])=><button key={name} onClick={()=>setItemForm({name,description,price_dollars,photo_url,available:true})}>{name} · ${price_dollars}</button>)}
+        <h3 className="centered-text">Select Week</h3>
+        <select value={selectedWeekId} onChange={e=>setSelectedWeekId(Number(e.target.value) || '')}>
+          <option value="">Choose a week</option>
+          {weeks.map(w=><option key={w.id} value={w.id}>#{w.id} · {new Date(w.starts_at).toLocaleDateString()}</option>)}
+        </select>
+        {selectedWeek && <p className="centered-text"><span className="badge">{selectedWeek.published ? 'Published' : 'Draft'}</span> <button onClick={()=>togglePublish(!selectedWeek.published)}>{selectedWeek.published?'Unpublish':'Publish'} Week</button></p>}
+
+        <h4 className="centered-text">Quick presets (food + dessert)</h4>
+        <div className="preset-wrap">
+          {presets.map((preset)=><button key={`${preset.name}-${preset.price_dollars}`} onClick={()=>setItemForm({name:preset.name,description:preset.description,price_dollars:preset.price_dollars,photo_url:preset.photo_url,available:true})}>{preset.name} · ${preset.price_dollars}</button>)}
         </div>
       </section>
 
       <section className="glass liquid-glass panel">
-        <h3>Live Preview {publishedWeek ? <span className="badge">Public week #{publishedWeek.id}</span> : <span className="badge">No published week</span>}</h3>
+        <h3 className="centered-text">Live Preview</h3>
         <div className="preview-card glass liquid-glass">
-          <h4>This Week's Menu</h4>
-          <p>{selectedWeek?.selling_days || 'Fridays'}</p>
-          {(items || []).map(item=><div key={item.id} className="preview-item"><span>{item.name} {!item.available && '(hidden)'}</span><strong>{dollars(item.price_cents)}</strong><button onClick={()=>updateItem(item)}>Edit</button></div>)}
-          {!items.length && <p>No items yet.</p>}
+          <h4 className="centered-text">This Week&apos;s Menu</h4>
+          <p className="centered-text muted">{selectedWeek ? new Date(selectedWeek.starts_at).toLocaleDateString() : 'Select a week to preview'}</p>
+          {(items || []).map(item=><div key={item.id} className="preview-item"><span>{item.name} {!item.available && '(hidden)'}</span><strong>{dollars(item.price_cents)}</strong></div>)}
+          {!items.length && <p className="centered-text">No items yet.</p>}
         </div>
       </section>
     </div>

@@ -21,8 +21,20 @@ def create_order(payload: OrderCreate, db: Session = Depends(get_db)):
     if payload.delivery_fee_cents < 0:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="delivery_fee_cents must be non-negative")
 
+    customer = db.query(Customer).filter(Customer.phone == payload.phone).first()
+    if not customer:
+        customer = Customer(
+            name=(payload.comment.split('|')[0].replace('Name:', '').strip() if payload.comment else 'Customer'),
+            phone=payload.phone,
+            email=payload.email,
+            sms_opt_in=True,
+            email_opt_in=bool(payload.email),
+        )
+        db.add(customer)
+        db.flush()
+
     order = Order(
-        customer_id=payload.customer_id,
+        customer_id=customer.id if customer else payload.customer_id,
         phone=payload.phone,
         email=payload.email,
         pickup_or_delivery=payload.pickup_or_delivery,

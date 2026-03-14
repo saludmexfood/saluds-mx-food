@@ -19,7 +19,7 @@ export async function apiFetch<T>(
   };
 }
 
-const baseUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || "").replace(/\/$/, "");
+const baseUrl = (process.env.NEXT_PUBLIC_BACKEND_URL || '').replace(/\/$/, '');
 
 function buildUrl(path: string): string {
   return `${baseUrl}${path}`;
@@ -27,16 +27,16 @@ function buildUrl(path: string): string {
 
 function getAuthHeaders(): Record<string, string> {
   const token =
-    typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
 
   return {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
 }
 
 export function getMenuWeeks() {
-  return apiFetch<any[]>(buildUrl("/admin/menu/weeks/"), {
+  return apiFetch<any[]>(buildUrl('/admin/menu/weeks/'), {
     headers: getAuthHeaders()
   });
 }
@@ -47,8 +47,8 @@ export function createMenuWeek(payload: {
   published: boolean;
   starts_at: string;
 }) {
-  return apiFetch<any>(buildUrl("/admin/menu/weeks/"), {
-    method: "POST",
+  return apiFetch<any>(buildUrl('/admin/menu/weeks/'), {
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
@@ -64,7 +64,7 @@ export function updateMenuWeek(
   }>
 ) {
   return apiFetch<any>(buildUrl(`/admin/menu/weeks/${id}`), {
-    method: "PATCH",
+    method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
@@ -84,8 +84,8 @@ export function createMenuItem(payload: {
   price_cents: number;
   available: boolean;
 }) {
-  return apiFetch<any>(buildUrl("/admin/menu/items/"), {
-    method: "POST",
+  return apiFetch<any>(buildUrl('/admin/menu/items/'), {
+    method: 'POST',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
@@ -102,7 +102,7 @@ export function updateMenuItem(
   }>
 ) {
   return apiFetch<any>(buildUrl(`/admin/menu/items/${id}`), {
-    method: "PATCH",
+    method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify(payload)
   });
@@ -125,5 +125,32 @@ export function updateAdminOrderStatus(orderId: number, status: string) {
     method: 'PATCH',
     headers: getAuthHeaders(),
     body: JSON.stringify({ status })
+  });
+}
+
+export function getCustomers() {
+  return apiFetch<any[]>(buildUrl('/api/admin/customers/'), {
+    headers: getAuthHeaders()
+  });
+}
+
+export function createCustomer(payload: {
+  name: string;
+  phone: string;
+  email?: string;
+  sms_opt_in: boolean;
+  email_opt_in: boolean;
+}) {
+  return apiFetch<any>(buildUrl('/api/admin/customers/'), {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload)
+  });
+}
+
+export function deleteCustomer(id: number) {
+  return apiFetch<any>(buildUrl(`/api/admin/customers/${id}`), {
+    method: 'DELETE',
+    headers: getAuthHeaders()
   });
 }

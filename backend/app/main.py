@@ -14,6 +14,7 @@ from .routes.admin_menu_weeks import router as admin_menu_weeks_router
 from .routes.admin_menu_items import router as admin_menu_items_router
 from .routes.admin_orders import router as admin_orders_router
 from .routes.admin_menu import router as admin_menu_router
+from .routes.admin_customers import router as admin_customers_router
 from .routes.queue import router as queue_router
 
 app = FastAPI(title="FoodBiz API")
@@ -60,6 +61,7 @@ app.include_router(admin_menu_weeks_router)
 app.include_router(admin_menu_items_router)
 app.include_router(admin_orders_router)
 app.include_router(admin_menu_router)
+app.include_router(admin_customers_router)
 
 # Queue and other internal APIs
 app.include_router(queue_router, prefix="/api")

@@ -37,11 +37,8 @@ export default function AdminFrame({ children }: { children: ReactNode }) {
       <div className="orbital-ring admin-ring-2" />
       <div className="admin-shell">
         {authed && (
-          <nav className="admin-nav glass liquid-glass">
-            <Link href="/dashboard">Dashboard</Link>
-            <Link href="/menu">Menu</Link>
-            <Link href="/orders">Orders</Link>
-            <Link href="/settings">Settings</Link>
+          <nav className="admin-nav">
+            <Link href="/dashboard">Home / Admin Portal</Link>
             <button onClick={() => { clearAdminSession(); window.location.href = '/login'; }}>Logout</button>
           </nav>
         )}
